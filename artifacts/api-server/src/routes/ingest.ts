@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, apiTokensTable, eventsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBearer } from "../middlewares/requireAuth";
+import { computeScore } from "../lib/scorer";
 
 const router = Router();
 
@@ -24,12 +25,9 @@ router.post("/", requireBearer, async (req, res) => {
       session_id,
       domain,
       event_type,
-      score,
-      verdict,
-      country,
-      user_agent,
       referrer,
       duration_ms,
+      signals,
     } = req.body;
 
     if (!session_id) {
@@ -37,10 +35,14 @@ router.post("/", requireBearer, async (req, res) => {
       return;
     }
 
-    const humanScore = typeof score === "number" ? score : Math.random() * 0.3 + 0.7;
-    const computedVerdict =
-      verdict ||
-      (humanScore >= 0.7 ? "HUMAN" : humanScore >= 0.3 ? "CAPTCHA" : "BOT");
+    const serverUserAgent = req.headers["user-agent"] ?? null;
+
+    const result = computeScore({
+      userAgent: serverUserAgent,
+      signals: signals ?? null,
+      referrer: referrer ?? null,
+      domain: domain ?? null,
+    });
 
     await db.insert(eventsTable).values({
       tokenId: String(tokenRow.id),
@@ -48,15 +50,23 @@ router.post("/", requireBearer, async (req, res) => {
       sessionId: session_id,
       domain: domain || null,
       eventType: event_type || "page_view",
-      score: humanScore,
-      verdict: computedVerdict,
-      country: country || null,
-      userAgent: user_agent || null,
+      score: result.score,
+      verdict: result.verdict,
+      country: null,
+      userAgent: serverUserAgent,
       referrer: referrer || null,
       durationMs: duration_ms || null,
+      signals: signals ?? null,
+      flags: result.flags,
+      factors: result.factors,
     });
 
-    res.json({ ok: true, verdict: computedVerdict, score: humanScore });
+    res.json({
+      ok: true,
+      verdict: result.verdict,
+      score: result.score,
+      flags: result.flags,
+    });
   } catch (err) {
     res.status(500).json({ error: "Ingest failed" });
   }
