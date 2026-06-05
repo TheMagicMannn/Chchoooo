@@ -1,0 +1,481 @@
+# HUMAN TELEMETRY PLATFORM — COMPLETE DEVELOPMENT HANDOFF
+
+You are taking over development of a SaaS platform called Human Telemetry.
+
+Your job is NOT to assume functionality exists.
+
+You must inspect the entire codebase and provide only evidence-based conclusions derived directly from source code, database schemas, APIs, infrastructure, configuration files, tests, and implementation details.
+
+Never infer implementation from UI claims.
+
+Never assume functionality exists because a page or button exists.
+
+Everything must be verified from code.
+
+---
+
+# PRIMARY OBJECTIVES
+
+Perform a complete audit of the platform.
+
+Determine:
+
+1. What is fully implemented.
+2. What is partially implemented.
+3. What is UI-only.
+4. What uses mock data.
+5. What uses random data.
+6. What is production ready.
+7. What is not production ready.
+8. What was added in newer versions.
+9. What was removed from older versions.
+10. What merge conflicts still exist.
+11. What security issues exist.
+12. What scalability issues exist.
+13. What architecture improvements are required.
+14. What is needed to become a commercial SaaS platform.
+15. What is needed to become a competitive bot detection platform.
+
+---
+
+# AUDIT PROCESS
+
+Analyze:
+
+- Frontend
+- Backend
+- Database
+- Infrastructure
+- Authentication
+- APIs
+- Webhooks
+- SDKs
+- Telemetry collection
+- Risk scoring
+- Alerting
+- Reporting
+- Analytics
+- Billing
+- Teams
+- Organizations
+- Roles
+- Permissions
+- Session replay
+- Fingerprinting
+- Behavioral biometrics
+- AI detection
+- Integrations
+
+For every feature provide:
+
+### Status
+
+One of:
+
+- Fully Implemented
+- Partially Implemented
+- Mocked
+- UI Only
+- Broken
+- Missing
+
+### Evidence
+
+List:
+
+- File paths
+- Functions
+- Classes
+- Routes
+- Components
+- Database tables
+
+### Production Readiness
+
+Score:
+
+0–100
+
+### Required Work
+
+Describe exactly what remains.
+
+---
+
+# MERGE VALIDATION
+
+Assume there were two versions:
+
+Version A:
+- Stronger scoring engine
+- Server-side risk scoring
+- Detection flags
+- Signal processing
+
+Version B:
+- Alert rules
+- Webhooks
+- Better SaaS infrastructure
+- Alert management
+
+Determine:
+
+1. Which files came from Version A.
+2. Which files came from Version B.
+3. What was lost during merging.
+4. What functionality regressed.
+5. What functionality improved.
+6. Whether the current merge is functional.
+7. Whether database schemas are synchronized.
+8. Whether migrations are synchronized.
+9. Whether APIs and UI are synchronized.
+
+Create a detailed merge report.
+
+---
+
+# BOT DETECTION AUDIT
+
+Determine if the platform truly performs bot detection.
+
+Identify:
+
+- Actual signals collected
+- Actual scoring logic
+- Actual verdict generation
+- Actual anomaly detection
+- Actual fingerprinting
+- Actual behavioral analysis
+
+Specifically search for:
+
+Math.random()
+
+hardcoded scores
+
+fake analytics
+
+generated chart data
+
+placeholder telemetry
+
+client-trusted verdicts
+
+client-trusted risk scores
+
+mock alerts
+
+simulated attacks
+
+placeholder reports
+
+For each occurrence provide:
+
+- File
+- Line
+- Explanation
+- Severity
+
+---
+
+# TELEMETRY COLLECTION AUDIT
+
+Document every collected signal.
+
+Examples:
+
+Mouse movement
+
+Scroll behavior
+
+Keyboard cadence
+
+Focus changes
+
+Touch interactions
+
+Device signals
+
+Browser signals
+
+Network signals
+
+Timing signals
+
+Pointer velocity
+
+Acceleration
+
+Entropy calculations
+
+Document:
+
+1. Collected
+2. Stored
+3. Processed
+4. Scored
+5. Visualized
+
+for every signal.
+
+---
+
+# DATABASE AUDIT
+
+Produce complete inventory of:
+
+Tables
+
+Columns
+
+Indexes
+
+Constraints
+
+Relations
+
+For every table provide:
+
+Purpose
+
+Used by
+
+Unused status
+
+Migration status
+
+Production readiness
+
+Potential issues
+
+---
+
+# API AUDIT
+
+Generate full API inventory.
+
+For every endpoint:
+
+Method
+
+Path
+
+Authentication
+
+Authorization
+
+Input validation
+
+Output validation
+
+Error handling
+
+Rate limiting
+
+Production readiness
+
+Security risks
+
+---
+
+# SECURITY AUDIT
+
+Identify:
+
+Trusting client data
+
+Missing validation
+
+Missing authorization
+
+Privilege escalation
+
+Broken access control
+
+Token leakage
+
+Secrets exposure
+
+Injection risks
+
+Replay attacks
+
+Webhook risks
+
+Authentication weaknesses
+
+Provide severity:
+
+Critical
+
+High
+
+Medium
+
+Low
+
+---
+
+# SaaS READINESS AUDIT
+
+Determine whether platform supports:
+
+Organizations
+
+Teams
+
+Role Based Access Control
+
+Billing
+
+Subscriptions
+
+Usage limits
+
+Audit logs
+
+SSO
+
+Enterprise features
+
+Data retention
+
+Compliance requirements
+
+For each:
+
+Implemented
+
+Partial
+
+Missing
+
+---
+
+# COMPETITIVE ANALYSIS
+
+Compare platform architecture against:
+
+Cloudflare Turnstile
+
+Arkose Labs
+
+Kasada
+
+Fingerprint
+
+DataDome
+
+PerimeterX/Human
+
+BotGuard
+
+Provide:
+
+Missing capabilities
+
+Competitive gaps
+
+Unique strengths
+
+Potential differentiation
+
+---
+
+# ROADMAP GENERATION
+
+Generate:
+
+### Phase 1
+MVP Stabilization
+
+### Phase 2
+Production Launch
+
+### Phase 3
+Commercial SaaS
+
+### Phase 4
+Enterprise
+
+### Phase 5
+Market Leader
+
+For each phase provide:
+
+Features
+
+Dependencies
+
+Risk
+
+Complexity
+
+Estimated effort
+
+---
+
+# DEVELOPMENT RULES
+
+When proposing work:
+
+1. Never recommend mock data.
+2. Never recommend placeholder implementations.
+3. Never recommend fake analytics.
+4. Never recommend client-trusted security decisions.
+5. Prefer server-side verification.
+6. Prefer explainable scoring.
+7. Prefer production-ready architecture.
+8. Prefer scalable multi-tenant design.
+9. Prefer observable systems.
+10. Prefer maintainable code.
+
+---
+
+# FINAL OUTPUT FORMAT
+
+Generate:
+
+## Executive Summary
+
+## Architecture Overview
+
+## Implemented Features
+
+## Partially Implemented Features
+
+## Missing Features
+
+## Merge Analysis
+
+## Database Analysis
+
+## API Analysis
+
+## Security Analysis
+
+## Bot Detection Analysis
+
+## Production Readiness Scores
+
+## Technical Debt
+
+## Competitive Gap Analysis
+
+## Top 25 Highest Priority Tasks
+
+## Recommended Architecture
+
+## 12-Month Product Roadmap
+
+## Estimated Path To Enterprise Readiness
+
+Every statement must be backed by source code evidence.
+
+No assumptions.
+
+No hallucinations.
+
+No marketing language.
+
+Evidence-based engineering analysis only.

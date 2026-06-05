@@ -1,0 +1,266 @@
+The current Replit agent session timed out while applying the larger production upgrade request.
+
+What you’re asking for now is a major transition from:
+
+* interactive prototype/demo SaaS UI
+
+to:
+
+* actual production application architecture
+
+including:
+
+* responsive mobile UX
+* persistent backend/database state
+* authentication
+* onboarding persistence
+* real integrations
+* OAuth/connect flows
+* live telemetry ingestion
+* reporting engine
+* logs explorer
+* real-time analytics
+
+That’s absolutely achievable, but it’s now entering “full product build” territory rather than iterative UI enhancement.
+
+The highest-priority production items you identified are correct:
+
+Immediate Production Priorities
+
+1. Mobile-first responsive navigation
+
+Critical issue:
+
+* hidden/unusable sidebar on mobile
+
+Needs:
+
+* collapsible drawer
+* touch-friendly menus
+* responsive charts/tables
+* mobile report layouts
+
+⸻
+
+2. Replace mock data
+
+Current state:
+
+* demo metrics
+* simulated analytics
+
+Needs:
+
+* real persistence layer
+* live API state
+* stored domains/users
+* session/event ingestion
+
+⸻
+
+3. Functional onboarding/auth
+
+Needs:
+
+* signup/login
+* JWT/session auth
+* onboarding wizard
+* profile persistence
+* domain registration
+* API token generation
+
+⸻
+
+4. Real integrations
+
+Current:
+
+* placeholder connectors
+
+Production:
+
+* OAuth flows
+* token storage
+* sync jobs
+* webhook subscriptions
+
+Especially:
+
+* Google
+* Slack
+* WooCommerce
+* WordPress
+
+⸻
+
+What A Real Production Stack Should Become
+
+Frontend
+
+* React
+* Tailwind
+* Zustand/Redux
+* React Query
+* WebSocket/SSE updates
+
+⸻
+
+Backend API
+
+Likely:
+
+* Node.js
+    OR
+* Go
+
+with:
+
+* auth
+* telemetry ingestion
+* integrations
+* reporting
+* metrics APIs
+
+⸻
+
+Database
+
+You now need BOTH:
+
+Relational DB
+
+For:
+
+* users
+* auth
+* subscriptions
+* integrations
+* domains
+* reports
+
+Example:
+
+* PostgreSQL
+
+Analytics DB
+
+For:
+
+* telemetry
+* events
+* sessions
+* analytics
+
+Example:
+
+* ClickHouse
+
+⸻
+
+Most Important Architectural Shift
+
+You should stop thinking of this as:
+
+“a dashboard”
+
+and start thinking:
+
+“multi-tenant analytics SaaS platform”
+
+That changes everything:
+
+* auth
+* RBAC
+* billing
+* onboarding
+* integrations
+* quotas
+* APIs
+* observability
+* support tooling
+
+⸻
+
+Recommended Realistic Build Order
+
+Phase 1 — Make It Truly Functional
+
+Build:
+
+* auth
+* onboarding
+* domains
+* GTM snippet generation
+* telemetry ingestion
+* persistent storage
+* live dashboard
+
+This alone is enough for beta users.
+
+⸻
+
+Phase 2 — Analytics
+
+Add:
+
+* filters
+* reports
+* drill-down
+* export
+* saved views
+* time windows
+
+⸻
+
+Phase 3 — Integrations
+
+Add:
+
+* GA4
+* Slack alerts
+* WooCommerce
+* WordPress plugin
+* webhooks
+
+⸻
+
+Phase 4 — Scale/ML
+
+Then:
+
+* Kafka
+* Prometheus
+* ONNX
+* anomaly detection
+* clustering
+* advanced scoring
+
+⸻
+
+Most Important Production Advice
+
+Do NOT attempt:
+
+* advanced AI
+* huge infra
+* Kafka clusters
+* edge failover
+* ONNX optimization
+
+before:
+
+* onboarding works
+* mobile works
+* auth works
+* dashboard works
+* integrations work
+
+Those are the real MVP blockers.
+
+Relevant production platforms/tools:
+
+* WooCommerce Developer Docs￼
+* Google OAuth Documentation￼
+* Slack API Platform￼
+* WordPress Plugin Handbook￼
+* PostgreSQL￼

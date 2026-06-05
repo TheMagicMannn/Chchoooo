@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "T132xPFk238t3aRM6EsMa"
+uri = "file://AUDIT_REPORT.md"
+type = "text"
+title = "Human Telemetry Platform — Complete Audit Report"

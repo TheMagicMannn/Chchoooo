@@ -1,0 +1,2 @@
+- [Subagent JSX pitfalls](subagent-jsx-pitfalls.md) — subagents write React.Fragment without import and use template literals in JSX; known fixes documented.
+- [Clerk + Tailwind v4 setup](clerk-tailwind-v4.md) — layer declaration + optimize:false required for Clerk CSS to work in prod builds; lib/db needs tsc --build before API typecheck passes.
