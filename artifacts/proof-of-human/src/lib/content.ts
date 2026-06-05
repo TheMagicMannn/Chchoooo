@@ -1,64 +1,247 @@
-export const TS_SDK_CODE = `// proof-of-human-sdk/src/index.ts
-export interface TelemetryEvent {
-  sessionId: string;
-  eventType: 'mousemove' | 'keydown' | 'scroll' | 'click';
-  timestamp: number;
-  x?: number;
-  y?: number;
-  velocity?: number;
-  keyCode?: number;
-  scrollDelta?: number;
-}
+export const TS_SDK_CODE = `/**
+ * Proof of Human Browser SDK v1.0
+ *
+ * Drop this script on any page. Configure via window.PoH before loading.
+ * Zero dependencies. < 5KB. Works in all modern browsers.
+ *
+ * window.PoH = {
+ *   token:     "tok_...",                    // required — your API token
+ *   ingestUrl: "https://…/api/ingest",       // required — your PoH API URL
+ *   domain:    "yoursite.com",               // optional, defaults to hostname
+ *   sessionId: "uuid",                       // optional, auto-generated
+ * };
+ *
+ * Signals collected and computed:
+ *   Behavioral : mouseEntropy, keystrokeCv, scrollVariance, timingScore
+ *   Counts     : mouseEventCount, keystrokeCount, scrollEventCount, clickCount
+ *   Timing     : firstInteractMs, sessionDurationMs
+ *   Environment: hasWebdriver, pluginCount, hasLanguages, isMobile,
+ *                screenW/H, outerW/H, hardwareConcurrency, deviceMemory,
+ *                colorDepth, hasTouchSupport, cookieEnabled
+ *   Fingerprint: canvasHash, audioHash, webglVendor, webglRenderer, timezone
+ *   Composite  : fingerprintScore, composite  (client-weighted, 0–1)
+ *
+ * Sends twice: once at 5 s (early baseline) and once on page hide (keepalive).
+ */
+(function (W) {
+  'use strict';
+  var cfg    = W.PoH || {};
+  var TOKEN  = cfg.token;
+  var INGEST = cfg.ingestUrl || (W.location.origin + '/api/ingest');
+  var DOMAIN = cfg.domain    || W.location.hostname;
+  var T0     = Date.now();
 
-export class ProofOfHumanSDK {
-  private sessionId: string;
-  private buffer: TelemetryEvent[] = [];
-  private endpoint: string;
-  private flushInterval: ReturnType<typeof setInterval>;
+  if (!TOKEN) { W.console && W.console.warn('[PoH] Missing token'); return; }
 
-  constructor(config: { endpoint: string; sessionId?: string }) {
-    this.endpoint = config.endpoint;
-    this.sessionId = config.sessionId ?? crypto.randomUUID();
-    this.flushInterval = setInterval(() => this.flush(), 2000);
-    this.attachListeners();
+  function uid() {
+    return W.crypto && W.crypto.randomUUID ? W.crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          var r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
   }
 
-  private attachListeners() {
-    let lastX = 0, lastY = 0, lastT = 0;
-    document.addEventListener('mousemove', (e) => {
-      const now = Date.now();
-      const dt = now - lastT;
-      const dist = Math.hypot(e.clientX - lastX, e.clientY - lastY);
-      this.push({ eventType: 'mousemove', x: e.clientX, y: e.clientY, velocity: dt > 0 ? dist / dt : 0 });
-      lastX = e.clientX; lastY = e.clientY; lastT = now;
-    });
-    document.addEventListener('keydown', (e) => {
-      this.push({ eventType: 'keydown', keyCode: e.keyCode });
-    });
-    document.addEventListener('scroll', () => {
-      this.push({ eventType: 'scroll', scrollDelta: window.scrollY });
-    });
+  var SESSION = cfg.sessionId || uid();
+  var mPts = [], kTimes = [], sPts = [], aTimes = [];
+  var clicks = 0, interactions = 0, firstMs = null;
+
+  function touch(t) {
+    interactions++;
+    if (firstMs === null) firstMs = t - T0;
+    if (aTimes.length < 500) aTimes.push(t);
   }
 
-  private push(partial: Omit<TelemetryEvent, 'sessionId' | 'timestamp'>) {
-    this.buffer.push({ sessionId: this.sessionId, timestamp: Date.now(), ...partial });
-    if (this.buffer.length >= 50) this.flush();
+  // Passive event collection
+  var lx = -1, ly = -1;
+  W.addEventListener('mousemove', function(e) {
+    var t = Date.now();
+    if (Math.abs(e.clientX-lx)>1 || Math.abs(e.clientY-ly)>1) {
+      if (mPts.length < 300) mPts.push({x:e.clientX,y:e.clientY});
+      lx=e.clientX; ly=e.clientY;
+    }
+    touch(t);
+  }, {passive:true});
+  W.addEventListener('keydown',    function() { var t=Date.now(); if(kTimes.length<200) kTimes.push(t); touch(t); }, {passive:true});
+  W.addEventListener('scroll',     function() { var t=Date.now(); if(sPts.length<200) sPts.push(W.scrollY||0); touch(t); }, {passive:true});
+  W.addEventListener('click',      function() { clicks++; touch(Date.now()); }, {passive:true});
+  W.addEventListener('touchstart', function() { touch(Date.now()); }, {passive:true});
+
+  // Behavioral metrics
+  function entropy(pts) {
+    if (pts.length < 10) return pts.length ? 0.35 : 0;
+    var b=[0,0,0,0,0,0,0,0], L2=Math.LN2;
+    for (var i=1;i<pts.length;i++) {
+      var dx=pts[i].x-pts[i-1].x, dy=pts[i].y-pts[i-1].y;
+      if (Math.abs(dx)<0.5&&Math.abs(dy)<0.5) continue;
+      b[Math.floor((Math.atan2(dy,dx)+Math.PI)/(Math.PI/4))%8]++;
+    }
+    var tot=b.reduce(function(a,v){return a+v;},0); if(!tot) return 0;
+    var H=0; for(var j=0;j<8;j++) if(b[j]) { var p=b[j]/tot; H-=p*(Math.log(p)/L2); }
+    return Math.min(1,H/3);
   }
 
-  async flush() {
-    if (this.buffer.length === 0) return;
-    const batch = this.buffer.splice(0, this.buffer.length);
-    await fetch(this.endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ events: batch }),
-    });
+  function cv(times) {
+    if (times.length < 4) return times.length ? 0.35 : 0;
+    var iv=[]; for(var i=1;i<times.length;i++) iv.push(times[i]-times[i-1]);
+    var m=iv.reduce(function(a,b){return a+b;},0)/iv.length; if(!m) return 0;
+    var sd=Math.sqrt(iv.reduce(function(s,v){return s+Math.pow(v-m,2);},0)/iv.length);
+    return Math.min(1,(sd/m)/2);
   }
 
-  destroy() {
-    clearInterval(this.flushInterval);
+  function scrollVar(pos) {
+    if (pos.length < 3) return pos.length ? 0.35 : 0;
+    var d=[]; for(var i=1;i<pos.length;i++) d.push(Math.abs(pos[i]-pos[i-1]));
+    var m=d.reduce(function(a,b){return a+b;},0)/d.length;
+    var sd=Math.sqrt(d.reduce(function(s,v){return s+Math.pow(v-m,2);},0)/d.length);
+    return Math.min(1,sd/100);
   }
-}`;
+
+  function timing(times) {
+    if (times.length < 5) return 0.5;
+    var iv=[]; for(var i=1;i<times.length;i++){var d=times[i]-times[i-1]; if(d>0&&d<10000) iv.push(d);}
+    if (iv.length<4) return 0.5;
+    var m=iv.reduce(function(a,b){return a+b;},0)/iv.length; if(!m) return 0;
+    var sd=Math.sqrt(iv.reduce(function(s,v){return s+Math.pow(v-m,2);},0)/iv.length);
+    return Math.min(1,sd/m);
+  }
+
+  function canvasHash() {
+    try {
+      var c=document.createElement('canvas'); c.width=220; c.height=30;
+      var x=c.getContext('2d'); if(!x) return 0;
+      x.textBaseline='alphabetic'; x.fillStyle='#f0f'; x.fillRect(10,1,100,20);
+      x.fillStyle='#069'; x.font='11pt no-real-font,Arial'; x.fillText('PoH \\u2603 \\u00e9',2,15);
+      x.fillStyle='rgba(102,204,0,0.7)'; x.font='16pt Arial'; x.fillText('PoH \\u2603 \\u00e9',4,20);
+      var d=c.toDataURL().slice(22), h=0;
+      for(var i=0;i<Math.min(d.length,600);i++) h=((h<<5)-h+d.charCodeAt(i))|0;
+      return h;
+    } catch(e) { return 0; }
+  }
+
+  function audioHash(cb) {
+    try {
+      if (!W.OfflineAudioContext) { cb(0); return; }
+      var ctx=new W.OfflineAudioContext(1,44100,44100);
+      var osc=ctx.createOscillator(), cmp=ctx.createDynamicsCompressor();
+      cmp.threshold.setValueAtTime(-50,0); cmp.knee.setValueAtTime(40,0);
+      cmp.ratio.setValueAtTime(12,0); cmp.attack.setValueAtTime(0,0); cmp.release.setValueAtTime(0.25,0);
+      osc.connect(cmp); cmp.connect(ctx.destination); osc.start(0);
+      ctx.oncomplete=function(e){
+        var d=e.renderedBuffer.getChannelData(0), s=0;
+        for(var i=4500;i<Math.min(d.length,5000);i++) s+=Math.abs(d[i]);
+        cb(Math.round(s*1e6)|0);
+      };
+      ctx.startRendering();
+    } catch(e) { cb(0); }
+  }
+
+  function webgl() {
+    try {
+      var c=document.createElement('canvas');
+      var gl=c.getContext('webgl')||c.getContext('experimental-webgl'); if(!gl) return {vendor:'',renderer:''};
+      var ext=gl.getExtension('WEBGL_debug_renderer_info');
+      return {
+        vendor:  String(ext?gl.getParameter(ext.UNMASKED_VENDOR_WEBGL)  :(gl.getParameter(gl.VENDOR)||'')),
+        renderer:String(ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):(gl.getParameter(gl.RENDERER)||'')),
+      };
+    } catch(e) { return {vendor:'',renderer:''}; }
+  }
+
+  var nav=W.navigator||{}, scr=W.screen||{}, wgl=webgl();
+  var ENV={
+    isMobile:/Mobi|Android|iPhone|iPad/i.test(nav.userAgent||''),
+    hasWebdriver:!!nav.webdriver, pluginCount:(nav.plugins||[]).length,
+    hasLanguages:!!(nav.languages&&nav.languages.length>0),
+    screenW:scr.width||0, screenH:scr.height||0,
+    outerW:W.outerWidth||0, outerH:W.outerHeight||0,
+    hardwareConcurrency:nav.hardwareConcurrency||0,
+    deviceMemory:'deviceMemory' in nav?nav.deviceMemory:-1,
+    colorDepth:scr.colorDepth||0,
+    hasTouchSupport:'ontouchstart' in W||!!(nav.maxTouchPoints>0),
+    maxTouchPoints:nav.maxTouchPoints||0, cookieEnabled:!!nav.cookieEnabled,
+    webglVendor:wgl.vendor, webglRenderer:wgl.renderer, canvasHash:0, audioHash:0,
+    timezone:typeof Intl!=='undefined'&&Intl.DateTimeFormat?(Intl.DateTimeFormat().resolvedOptions().timeZone||')':'',
+  };
+
+  function fpScore(s) {
+    var r=(s.webglRenderer||'').toLowerCase();
+    var checks=[!s.hasWebdriver,s.pluginCount>0,s.hasLanguages,
+      s.outerW>100&&s.outerH>100,s.colorDepth>=24,s.hardwareConcurrency>=2,
+      s.cookieEnabled,s.canvasHash!==0,
+      !r||(r.indexOf('swiftshader')===-1&&r.indexOf('llvmpipe')===-1)];
+    var n=0; for(var i=0;i<checks.length;i++) if(checks[i]) n++;
+    return n/checks.length;
+  }
+
+  function composite(s) {
+    if (s.hasWebdriver) return 0.01;
+    var r=(s.webglRenderer||'').toLowerCase();
+    if (r&&(r.indexOf('swiftshader')!==-1||r.indexOf('llvmpipe')!==-1)) return 0.04;
+    var beh=0, bc=0;
+    if(s.mouseEventCount>=10){beh+=s.mouseEntropy;bc++;}
+    if(s.keystrokeCount>=3) {beh+=s.keystrokeCv;bc++;}
+    if(s.scrollEventCount>=2){beh+=s.scrollVariance;bc++;}
+    var behScore=bc?beh/bc:0.5, intScore=Math.min(1,s.interactionCount/8);
+    var score=(s.fingerprintScore*0.45)+(behScore*0.35)+(intScore*0.20);
+    if(s.outerW===0||s.outerH===0) score=Math.min(score,0.20);
+    if(!s.cookieEnabled) score=Math.min(score,0.50);
+    if(!s.isMobile&&s.hardwareConcurrency<=1) score=Math.min(score,0.60);
+    if(!s.isMobile&&s.pluginCount===0) score=Math.min(score,0.65);
+    return Math.max(0.01,Math.min(0.99,score));
+  }
+
+  function buildSignals() {
+    ENV.canvasHash=canvasHash();
+    var s={
+      mouseEntropy:entropy(mPts), keystrokeCv:cv(kTimes),
+      scrollVariance:scrollVar(sPts), timingScore:timing(aTimes),
+      mouseEventCount:mPts.length, keystrokeCount:kTimes.length,
+      scrollEventCount:sPts.length, clickCount:clicks,
+      interactionCount:interactions, firstInteractMs:firstMs,
+      sessionDurationMs:Date.now()-T0,
+      isMobile:ENV.isMobile, hasWebdriver:ENV.hasWebdriver,
+      pluginCount:ENV.pluginCount, hasLanguages:ENV.hasLanguages,
+      screenW:ENV.screenW, screenH:ENV.screenH, outerW:ENV.outerW, outerH:ENV.outerH,
+      hardwareConcurrency:ENV.hardwareConcurrency, deviceMemory:ENV.deviceMemory,
+      colorDepth:ENV.colorDepth, hasTouchSupport:ENV.hasTouchSupport,
+      maxTouchPoints:ENV.maxTouchPoints, cookieEnabled:ENV.cookieEnabled,
+      webglVendor:ENV.webglVendor, webglRenderer:ENV.webglRenderer,
+      canvasHash:ENV.canvasHash, audioHash:ENV.audioHash, timezone:ENV.timezone,
+      fingerprintScore:0, composite:0,
+    };
+    s.fingerprintScore=fpScore(s); s.composite=composite(s);
+    return s;
+  }
+
+  function send(sig, keepalive) {
+    try {
+      W.fetch(INGEST, {
+        method:'POST', keepalive:!!keepalive,
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        body:JSON.stringify({session_id:SESSION,event_type:'page_view',
+          domain:DOMAIN,referrer:document.referrer||null,
+          duration_ms:sig.sessionDurationMs,signals:sig}),
+      }).catch(function(){});
+    } catch(e) {}
+  }
+
+  var earlyFired=false;
+  var t=W.setTimeout(function(){
+    earlyFired=true;
+    audioHash(function(h){ENV.audioHash=h; send(buildSignals(),false);});
+  }, 5000);
+
+  function onHide(){
+    if(!earlyFired) W.clearTimeout(t);
+    audioHash(function(h){ENV.audioHash=h; send(buildSignals(),true);});
+  }
+
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='hidden') onHide();
+  });
+  W.addEventListener('pagehide', onHide, {once:true});
+
+}(window));`;
 
 export const WORKER_CODE = `// edge-ingress/src/worker.ts
 import { Kafka } from '@upstash/kafka';

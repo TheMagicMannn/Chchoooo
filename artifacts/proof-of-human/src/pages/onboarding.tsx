@@ -138,16 +138,19 @@ export default function Onboarding() {
   const txtRecordValue = `poh-site-verification=${domainRow?.verificationToken ?? "your-token"}`;
   const registrar = REGISTRAR_GUIDES[selectedRegistrar];
 
+  const sdkOrigin = window.location.origin;
+
   const gtmCode = token
     ? `<!-- Proof of Human · Custom HTML tag · Trigger: All Pages -->
 <script>
 (function() {
   window.PoH = {
     token: "${token.token}",
-    sessionId: crypto.randomUUID()
+    ingestUrl: "${sdkOrigin}/api/ingest",
+    domain: "${domainRow?.domain ?? "yoursite.com"}"
   };
   var s = document.createElement("script");
-  s.src = "https://cdn.proofofhuman.io/sdk/v2.min.js";
+  s.src = "${sdkOrigin}/poh-sdk.js";
   s.async = true;
   document.head.appendChild(s);
 })();
@@ -159,10 +162,11 @@ export default function Onboarding() {
 <script>
   window.PoH = {
     token: "${token.token}",
-    sessionId: crypto.randomUUID()
+    ingestUrl: "${sdkOrigin}/api/ingest",
+    domain: "${domainRow?.domain ?? "yoursite.com"}"
   };
 </script>
-<script src="https://cdn.proofofhuman.io/sdk/v2.min.js" async></script>`
+<script src="${sdkOrigin}/poh-sdk.js" async></script>`
     : "";
 
   const apiCode = token
@@ -172,7 +176,21 @@ export default function Onboarding() {
   -d '{
     "session_id": "sess_abc123",
     "event_type": "page_view",
-    "domain": "${domainRow?.domain ?? "yourdomain.com"}"
+    "domain": "${domainRow?.domain ?? "yourdomain.com"}",
+    "signals": {
+      "composite": 0.91,
+      "mouseEntropy": 0.78,
+      "keystrokeCv": 0.52,
+      "scrollVariance": 0.44,
+      "timingScore": 0.67,
+      "fingerprintScore": 0.89,
+      "interactionCount": 14,
+      "clickCount": 3,
+      "hasWebdriver": false,
+      "cookieEnabled": true,
+      "hardwareConcurrency": 8,
+      "pluginCount": 3
+    }
   }'`
     : "";
 
