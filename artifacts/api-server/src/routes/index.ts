@@ -7,6 +7,7 @@ import dashboardRouter from "./dashboard";
 import analyticsRouter from "./analytics";
 import webhooksRouter from "./webhooks";
 import alertRulesRouter from "./alert_rules";
+import billingRouter from "./billing";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/dashboard", dashboardRouter);
 router.use("/analytics", analyticsRouter);
 router.use("/webhooks", webhooksRouter);
 router.use("/alerts", alertRulesRouter);
+router.use("/billing", billingRouter);
 
 export default router;

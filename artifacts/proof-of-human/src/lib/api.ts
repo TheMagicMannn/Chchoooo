@@ -64,4 +64,7 @@ export const api = {
     toggle: (id: number, enabled: boolean) =>
       apiFetch(`/alerts/${id}`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
   },
+  billing: {
+    usage: () => apiFetch("/billing/usage"),
+  },
 };
