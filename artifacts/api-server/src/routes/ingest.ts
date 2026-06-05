@@ -3,12 +3,13 @@ import { db, apiTokensTable, eventsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBearer } from "../middlewares/requireAuth";
 import { tokenRateLimit } from "../middlewares/tokenRateLimit";
+import { monthlyQuota } from "../middlewares/monthlyQuota";
 import { computeScore } from "../lib/scorer";
 import { dispatchEvent } from "../lib/dispatch";
 
 const router = Router();
 
-router.post("/", requireBearer, tokenRateLimit, async (req, res) => {
+router.post("/", requireBearer, tokenRateLimit, monthlyQuota, async (req, res) => {
   try {
     const bearerToken = (req as any).bearerToken as string;
 
