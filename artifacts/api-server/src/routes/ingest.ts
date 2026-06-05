@@ -6,6 +6,7 @@ import { tokenRateLimit } from "../middlewares/tokenRateLimit";
 import { monthlyQuota } from "../middlewares/monthlyQuota";
 import { computeScore } from "../lib/scorer";
 import { dispatchEvent } from "../lib/dispatch";
+import { countryFromRequest } from "../lib/geoip";
 
 const router = Router();
 
@@ -55,7 +56,7 @@ router.post("/", requireBearer, tokenRateLimit, monthlyQuota, async (req, res) =
       eventType:  event_type || "page_view",
       score:      result.score,
       verdict:    result.verdict,
-      country:    null,
+      country:    countryFromRequest(req),
       userAgent:  serverUserAgent,
       referrer:   referrer   || null,
       durationMs: duration_ms || null,
