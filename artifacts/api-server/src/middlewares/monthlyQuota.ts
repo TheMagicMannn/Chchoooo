@@ -25,11 +25,11 @@ import { logger } from "../lib/logger";
 const CACHE_TTL_MS = 5 * 60_000; // refresh usage count every 5 minutes
 
 export const PLAN_MONTHLY_LIMITS: Record<string, number> = {
-  free:       10_000,
+  free:       30_000,
   growth:     1_000_000,
   enterprise: 20_000_000,
 };
-const DEFAULT_LIMIT = 10_000;
+const DEFAULT_LIMIT = 30_000;
 
 // ── Cache ─────────────────────────────────────────────────────────────────────
 
