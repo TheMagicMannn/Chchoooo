@@ -2,12 +2,13 @@ import { Router } from "express";
 import { db, apiTokensTable, eventsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBearer } from "../middlewares/requireAuth";
+import { tokenRateLimit } from "../middlewares/tokenRateLimit";
 import { computeScore } from "../lib/scorer";
 import { dispatchEvent } from "../lib/dispatch";
 
 const router = Router();
 
-router.post("/", requireBearer, async (req, res) => {
+router.post("/", requireBearer, tokenRateLimit, async (req, res) => {
   try {
     const bearerToken = (req as any).bearerToken as string;
 
