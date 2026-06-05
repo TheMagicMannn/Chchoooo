@@ -9,6 +9,7 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
+import clerkWebhookRouter from "./routes/clerk_webhook";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -34,6 +35,14 @@ app.use(
 );
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
+// Clerk webhook — must be registered with express.raw() BEFORE express.json()
+// so Svix can verify the raw request body signature.
+app.post(
+  "/api/webhooks/clerk",
+  express.raw({ type: "application/json" }),
+  clerkWebhookRouter,
+);
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())

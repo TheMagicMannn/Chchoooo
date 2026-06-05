@@ -1,5 +1,6 @@
 import { getAuth } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
+import { syncUser } from "./syncUser";
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const auth = getAuth(req);
@@ -9,7 +10,10 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     return;
   }
   (req as any).userId = userId;
-  next();
+
+  // Lazy-sync: ensure this user has a row in the users table.
+  // Fire syncUser as the next step in the middleware chain.
+  syncUser(req, res, next);
 }
 
 export function requireBearer(req: Request, res: Response, next: NextFunction) {
