@@ -3,6 +3,7 @@ import { db, apiTokensTable, eventsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBearer } from "../middlewares/requireAuth";
 import { computeScore } from "../lib/scorer";
+import { dispatchEvent } from "../lib/dispatch";
 
 const router = Router();
 
@@ -39,34 +40,47 @@ router.post("/", requireBearer, async (req, res) => {
 
     const result = computeScore({
       userAgent: serverUserAgent,
-      signals: signals ?? null,
-      referrer: referrer ?? null,
-      domain: domain ?? null,
+      signals:   signals ?? null,
+      referrer:  referrer ?? null,
+      domain:    domain ?? null,
     });
 
     await db.insert(eventsTable).values({
-      tokenId: String(tokenRow.id),
-      userId: tokenRow.userId,
-      sessionId: session_id,
-      domain: domain || null,
-      eventType: event_type || "page_view",
-      score: result.score,
-      verdict: result.verdict,
-      country: null,
-      userAgent: serverUserAgent,
-      referrer: referrer || null,
+      tokenId:    String(tokenRow.id),
+      userId:     tokenRow.userId,
+      sessionId:  session_id,
+      domain:     domain     || null,
+      eventType:  event_type || "page_view",
+      score:      result.score,
+      verdict:    result.verdict,
+      country:    null,
+      userAgent:  serverUserAgent,
+      referrer:   referrer   || null,
       durationMs: duration_ms || null,
-      signals: signals ?? null,
-      flags: result.flags,
-      factors: result.factors,
+      signals:    signals    ?? null,
+      flags:      result.flags,
+      factors:    result.factors,
     });
 
+    // Respond immediately — don't block on alert/webhook delivery
     res.json({
-      ok: true,
+      ok:      true,
       verdict: result.verdict,
-      score: result.score,
-      flags: result.flags,
+      score:   result.score,
+      flags:   result.flags,
     });
+
+    // Fire-and-forget: evaluate alert rules, dispatch webhooks
+    dispatchEvent({
+      userId:    tokenRow.userId,
+      sessionId: session_id,
+      verdict:   result.verdict,
+      score:     result.score,
+      domain:    domain    || null,
+      eventType: event_type || "page_view",
+      flags:     result.flags,
+    });
+
   } catch (err) {
     res.status(500).json({ error: "Ingest failed" });
   }
