@@ -11,6 +11,7 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
+import healthRouter from "./routes/health";
 import clerkWebhookRouter from "./routes/clerk_webhook";
 import { WebhookHandlers } from "./webhookHandlers";
 import { logger } from "./lib/logger";
@@ -95,6 +96,10 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Health check — registered BEFORE Clerk middleware so the platform probe
+// (GET /api from 127.0.0.1) never touches authentication logic.
+app.use("/api", healthRouter);
 
 // Public Stripe routes — registered BEFORE Clerk middleware so no auth is required
 app.get("/api/stripe/prices", async (_req, res) => {
