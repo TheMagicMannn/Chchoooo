@@ -196,6 +196,8 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
+      afterSignInUrl={`${basePath}/`}
+      afterSignUpUrl={`${basePath}/`}
       localization={{
         signIn: {
           start: {
