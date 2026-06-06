@@ -19,16 +19,10 @@ const clerkPublishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY
   ?? process.env.CLERK_PUBLISHABLE_KEY
   ?? "";
 
-const replitDomains = process.env.REPLIT_DOMAINS ?? "";
-const primaryDomain = replitDomains.split(",")[0]?.trim() ?? "";
-const clerkProxyUrl = process.env.VITE_CLERK_PROXY_URL
-  ?? (primaryDomain ? `https://${primaryDomain}/api/__clerk` : "");
-
 export default defineConfig({
   base: basePath,
   define: {
     "import.meta.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify(clerkPublishableKey),
-    "import.meta.env.VITE_CLERK_PROXY_URL": JSON.stringify(clerkProxyUrl),
   },
   plugins: [
     react(),
