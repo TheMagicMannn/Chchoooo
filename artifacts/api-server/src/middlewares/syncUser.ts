@@ -44,8 +44,8 @@ export async function syncUser(
     }
 
     // User not in DB — fetch from Clerk and insert
-    const clerk = clerkClient();
-    const clerkUser = await clerk.users.getUser(userId);
+    // clerkClient is a pre-built instance in @clerk/express v2, not a factory function
+    const clerkUser = await clerkClient.users.getUser(userId);
 
     const email =
       clerkUser.emailAddresses.find(

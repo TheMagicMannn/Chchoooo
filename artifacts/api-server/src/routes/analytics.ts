@@ -61,14 +61,16 @@ router.get("/hourly", requireAuth, async (req, res) => {
     const range = String(req.query.range || "7d");
     const since = getRangeStart(range);
 
-    let truncUnit: string;
-    if (range === "1h" || range === "6h") truncUnit = "hour";
-    else if (range === "24h") truncUnit = "hour";
-    else truncUnit = "day";
+    // truncUnit is always "hour" or "day" (controlled by our code, safe to inline)
+    const truncUnit: "hour" | "day" =
+      range === "1h" || range === "6h" || range === "24h" ? "hour" : "day";
+    // date_trunc requires a string literal as its first arg — use sql.raw to avoid
+    // passing it as a bound parameter ($1), which PostgreSQL rejects.
+    const truncExpr = sql`date_trunc(${sql.raw(`'${truncUnit}'`)}, ${eventsTable.createdAt})`;
 
     const rows = await db
       .select({
-        bucket: sql<string>`date_trunc(${truncUnit}, ${eventsTable.createdAt})::text`,
+        bucket: sql<string>`${truncExpr}::text`,
         total: count(),
         human: sql<number>`count(*) filter (where ${eventsTable.verdict} = 'HUMAN')`,
         bot: sql<number>`count(*) filter (where ${eventsTable.verdict} = 'BOT')`,
@@ -76,8 +78,8 @@ router.get("/hourly", requireAuth, async (req, res) => {
       })
       .from(eventsTable)
       .where(and(eq(eventsTable.userId, userId), gte(eventsTable.createdAt, since)))
-      .groupBy(sql`date_trunc(${truncUnit}, ${eventsTable.createdAt})`)
-      .orderBy(sql`date_trunc(${truncUnit}, ${eventsTable.createdAt})`);
+      .groupBy(truncExpr)
+      .orderBy(truncExpr);
 
     const formatted = rows.map((r) => ({
       t: r.bucket,

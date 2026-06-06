@@ -134,7 +134,13 @@ function HomeRedirect() {
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isSignedIn, isLoaded } = useAuth();
 
-  if (!isLoaded) return null;
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
   if (!isSignedIn) return <Redirect to="/sign-in" />;
   return <Component />;
 }
