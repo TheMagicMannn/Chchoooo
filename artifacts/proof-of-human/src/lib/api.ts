@@ -33,6 +33,8 @@ export const api = {
       apiFetch("/tokens", { method: "POST", body: JSON.stringify({ label: label || "default" }) }),
     delete: (id: number) =>
       apiFetch(`/tokens/${id}`, { method: "DELETE" }),
+    linkDomain: (id: number, linkedDomainId: number | null) =>
+      apiFetch(`/tokens/${id}`, { method: "PATCH", body: JSON.stringify({ linkedDomainId }) }),
   },
   dashboard: {
     stats: () => apiFetch("/dashboard/stats"),

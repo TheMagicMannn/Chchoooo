@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, apiTokensTable, eventsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { requireBearer } from "../middlewares/requireAuth";
 import { tokenRateLimit } from "../middlewares/tokenRateLimit";
 import { monthlyQuota } from "../middlewares/monthlyQuota";
@@ -59,24 +59,31 @@ router.post("/", requireBearer, tokenRateLimit, monthlyQuota, async (req, res) =
       domain:    domain ?? null,
     });
 
-    await db.insert(eventsTable).values({
-      tokenId:    String(tokenRow.id),
-      userId:     tokenRow.userId,
-      sessionId:  session_id,
-      domain:     domain     || null,
-      eventType:  event_type || "page_view",
-      score:      result.score,
-      verdict:    result.verdict,
-      country:    countryFromRequest(req),
-      userAgent:  serverUserAgent,
-      referrer:   referrer   || null,
-      durationMs: duration_ms || null,
-      signals:    signals    ?? null,
-      flags:      result.flags,
-      factors:    result.factors,
-    });
+    await Promise.all([
+      db.insert(eventsTable).values({
+        tokenId:    String(tokenRow.id),
+        userId:     tokenRow.userId,
+        sessionId:  session_id,
+        domain:     domain     || null,
+        eventType:  event_type || "page_view",
+        score:      result.score,
+        verdict:    result.verdict,
+        country:    countryFromRequest(req),
+        userAgent:  serverUserAgent,
+        referrer:   referrer   || null,
+        durationMs: duration_ms || null,
+        signals:    signals    ?? null,
+        flags:      result.flags,
+        factors:    result.factors,
+      }),
+      db.update(apiTokensTable)
+        .set({
+          lastUsedAt: new Date(),
+          usageCount: sql`${apiTokensTable.usageCount} + 1`,
+        })
+        .where(eq(apiTokensTable.id, tokenRow.id)),
+    ]);
 
-    // Respond immediately — don't block on alert/webhook delivery
     res.json({
       ok:      true,
       verdict: result.verdict,
@@ -84,7 +91,6 @@ router.post("/", requireBearer, tokenRateLimit, monthlyQuota, async (req, res) =
       flags:   result.flags,
     });
 
-    // Fire-and-forget: evaluate alert rules, dispatch webhooks
     dispatchEvent({
       userId:    tokenRow.userId,
       sessionId: session_id,
