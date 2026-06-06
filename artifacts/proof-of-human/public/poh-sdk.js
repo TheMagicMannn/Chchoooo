@@ -189,19 +189,75 @@
     try {
       var c = document.createElement('canvas');
       var gl = c.getContext('webgl') || c.getContext('experimental-webgl');
-      if (!gl) return { vendor:'', renderer:'' };
+      if (!gl) return { vendor:'', renderer:'', maxTextureSize:0, extensions:0 };
       var ext = gl.getExtension('WEBGL_debug_renderer_info');
       return {
-        vendor:   String(ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL)   : (gl.getParameter(gl.VENDOR)   || '')),
-        renderer: String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : (gl.getParameter(gl.RENDERER) || '')),
+        vendor:         String(ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL)   : (gl.getParameter(gl.VENDOR)   || '')),
+        renderer:       String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : (gl.getParameter(gl.RENDERER) || '')),
+        maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE) || 0,
+        extensions:     (gl.getSupportedExtensions() || []).length,
       };
-    } catch(e) { return { vendor:'', renderer:'' }; }
+    } catch(e) { return { vendor:'', renderer:'', maxTextureSize:0, extensions:0 }; }
+  }
+
+  // ── Font enumeration ─────────────────────────────────────────────────────────
+  //
+  // Measures rendered text width with each probe font to detect which fonts
+  // are installed. Different OSes and bot environments have different font sets.
+
+  var FONT_PROBE_TEXT    = 'mmmmmmmmmmlli';
+  var FONT_PROBE_SIZE    = '72px';
+  var FONT_BASELINES_ARR = ['monospace', 'sans-serif', 'serif'];
+  var PROBE_FONTS_LIST   = [
+    'Arial','Arial Black','Arial Narrow','Calibri','Cambria','Comic Sans MS',
+    'Courier New','Georgia','Gill Sans','Helvetica','Impact','Lucida Console',
+    'Lucida Sans Unicode','Microsoft Sans Serif','Palatino Linotype','Segoe UI',
+    'Tahoma','Times New Roman','Trebuchet MS','Verdana',
+    'Apple Chancery','Apple Color Emoji','Helvetica Neue','Menlo','Monaco',
+    'Optima','Futura','Droid Sans','Roboto','Noto Sans','Ubuntu',
+    'DejaVu Sans','Liberation Sans','Source Code Pro','Fira Code',
+    'MS Gothic','MS PGothic','SimSun','SimHei','Microsoft YaHei',
+    'Malgun Gothic','Gulim',
+  ];
+
+  function fontFingerprint() {
+    try {
+      var el = document.createElement('span');
+      el.style.cssText = 'position:absolute;top:-9999px;left:-9999px;visibility:hidden;font-size:' + FONT_PROBE_SIZE + ';';
+      el.textContent = FONT_PROBE_TEXT;
+      document.body.appendChild(el);
+      var baseW = {};
+      for (var b = 0; b < FONT_BASELINES_ARR.length; b++) {
+        el.style.fontFamily = FONT_BASELINES_ARR[b];
+        baseW[FONT_BASELINES_ARR[b]] = el.offsetWidth;
+      }
+      var found = [], h = 0x811c9dc5;
+      for (var i = 0; i < PROBE_FONTS_LIST.length; i++) {
+        var f = PROBE_FONTS_LIST[i];
+        el.style.fontFamily = '"' + f + '",' + FONT_BASELINES_ARR[0];
+        var w1 = el.offsetWidth;
+        el.style.fontFamily = '"' + f + '",' + FONT_BASELINES_ARR[1];
+        var w2 = el.offsetWidth;
+        if (w1 !== baseW[FONT_BASELINES_ARR[0]] || w2 !== baseW[FONT_BASELINES_ARR[1]]) {
+          found.push(f);
+        }
+      }
+      document.body.removeChild(el);
+      // FNV-1a hash of sorted font list
+      var joined = found.join(',');
+      for (var j = 0; j < joined.length; j++) {
+        h ^= joined.charCodeAt(j);
+        h = (h * 0x01000193) >>> 0;
+      }
+      return { count: found.length, hash: h >>> 0 };
+    } catch(e) { return { count: 0, hash: 0 }; }
   }
 
   // ── Environment ───────────────────────────────────────────────────────────────
 
   var nav = W.navigator || {}, scr = W.screen || {};
-  var wgl = webglInfo();
+  var wgl   = webglInfo();
+  var fonts = fontFingerprint();
 
   var ENV = {
     isMobile:            /Mobi|Android|iPhone|iPad/i.test(nav.userAgent || ''),
@@ -215,11 +271,16 @@
     hardwareConcurrency: nav.hardwareConcurrency || 0,
     deviceMemory:        'deviceMemory' in nav ? nav.deviceMemory : -1,
     colorDepth:          scr.colorDepth || 0,
+    devicePixelRatio:    W.devicePixelRatio || 1,
     hasTouchSupport:     'ontouchstart' in W || !!(nav.maxTouchPoints > 0),
     maxTouchPoints:      nav.maxTouchPoints || 0,
     cookieEnabled:       !!nav.cookieEnabled,
     webglVendor:         wgl.vendor,
     webglRenderer:       wgl.renderer,
+    webglMaxTextureSize: wgl.maxTextureSize,
+    webglExtensions:     wgl.extensions,
+    fontCount:           fonts.count,
+    fontHash:            fonts.hash,
     canvasHash:          0,   // filled synchronously at send time
     audioHash:           0,   // filled asynchronously
     timezone:            typeof Intl !== 'undefined' && Intl.DateTimeFormat
@@ -239,6 +300,7 @@
       s.hardwareConcurrency >= 2,
       s.cookieEnabled,
       s.canvasHash !== 0,
+      s.fontCount >= 5,   // bots/headless have very few installed fonts
       !rend || (rend.indexOf('swiftshader') === -1 && rend.indexOf('llvmpipe') === -1 && rend.indexOf('mesa offscreen') === -1),
     ];
     var n = 0;
@@ -302,8 +364,13 @@
       cookieEnabled:       ENV.cookieEnabled,
       webglVendor:         ENV.webglVendor,
       webglRenderer:       ENV.webglRenderer,
+      webglMaxTextureSize: ENV.webglMaxTextureSize,
+      webglExtensions:     ENV.webglExtensions,
+      fontCount:           ENV.fontCount,
+      fontHash:            ENV.fontHash,
       canvasHash:          ENV.canvasHash,
       audioHash:           ENV.audioHash,
+      devicePixelRatio:    ENV.devicePixelRatio,
       timezone:            ENV.timezone,
       fingerprintScore:    0,
       composite:           0,
