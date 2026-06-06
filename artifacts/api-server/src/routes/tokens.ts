@@ -6,7 +6,7 @@ import { randomUUID } from "crypto";
 
 const TOKEN_LIMITS: Record<string, number> = {
   free:       3,
-  growth:     Infinity,
+  growth:     20,
   enterprise: Infinity,
 };
 

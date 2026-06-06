@@ -7,7 +7,7 @@ import { promises as dns } from "dns";
 
 const DOMAIN_LIMITS: Record<string, number> = {
   free:       2,
-  growth:     Infinity,
+  growth:     15,
   enterprise: Infinity,
 };
 
