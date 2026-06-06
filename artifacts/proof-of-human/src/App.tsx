@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useAuth } from "@clerk/react";
+import { useEffect, useRef } from "react";
+import { ClerkProvider, SignIn, SignUp, useClerk, useAuth } from "@clerk/react";
 import { api } from "@/lib/api";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
@@ -128,16 +128,11 @@ function HomeRedirect() {
 }
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  return (
-    <>
-      <Show when="signed-in">
-        <Component />
-      </Show>
-      <Show when="signed-out">
-        <Redirect to="/sign-in" />
-      </Show>
-    </>
-  );
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) return null;
+  if (!isSignedIn) return <Redirect to="/sign-in" />;
+  return <Component />;
 }
 
 function ClerkQueryClientCacheInvalidator() {
@@ -196,8 +191,8 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
-      afterSignInUrl={`${basePath}/`}
-      afterSignUpUrl={`${basePath}/`}
+      signInFallbackRedirectUrl={`${basePath}/`}
+      signUpFallbackRedirectUrl={`${basePath}/`}
       localization={{
         signIn: {
           start: {
