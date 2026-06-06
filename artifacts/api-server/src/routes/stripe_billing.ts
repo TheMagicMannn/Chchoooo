@@ -16,8 +16,8 @@ router.get("/prices", async (_req, res) => {
   try {
     const prices = await stripeStorage.listPrices();
     res.json({ data: prices });
-  } catch (err: any) {
-    res.status(500).json({ error: "Failed to fetch prices" });
+  } catch (_err) {
+    res.json({ data: [] });
   }
 });
 

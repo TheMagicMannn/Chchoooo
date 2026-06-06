@@ -1,9 +1,11 @@
+import Stripe from 'stripe';
 import { db, usersTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { getUncachableStripeClient } from "./stripeClient.js";
 
 export class StripeStorage {
-  async getUser(clerkId: string) {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, clerkId));
+  async getUser(userId: string) {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     return user ?? null;
   }
 
@@ -12,40 +14,38 @@ export class StripeStorage {
     return user;
   }
 
-  async getSubscription(subscriptionId: string) {
-    const result = await db.execute(
-      sql`SELECT * FROM stripe.subscriptions WHERE id = ${subscriptionId}`
-    );
-    return result.rows[0] ?? null;
-  }
-
-  async getActiveSubscriptionForCustomer(customerId: string) {
-    const result = await db.execute(
-      sql`SELECT * FROM stripe.subscriptions WHERE customer = ${customerId} AND status = 'active' LIMIT 1`
-    );
-    return result.rows[0] ?? null;
+  async getSubscription(customerId: string): Promise<Stripe.Subscription | null> {
+    const stripe = await getUncachableStripeClient();
+    const subs = await stripe.subscriptions.list({ customer: customerId, status: "active", limit: 1 });
+    return subs.data[0] ?? null;
   }
 
   async listPrices() {
-    const result = await db.execute(
-      sql`
-        SELECT
-          p.id as product_id,
-          p.name as product_name,
-          p.description as product_description,
-          p.metadata as product_metadata,
-          pr.id as price_id,
-          pr.unit_amount,
-          pr.currency,
-          pr.recurring,
-          pr.metadata as price_metadata
-        FROM stripe.products p
-        JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
-        WHERE p.active = true
-        ORDER BY pr.unit_amount ASC
-      `
-    );
-    return result.rows;
+    const stripe = await getUncachableStripeClient();
+    const [products, prices] = await Promise.all([
+      stripe.products.list({ active: true, limit: 100 }),
+      stripe.prices.list({ active: true, limit: 100 }),
+    ]);
+
+    const productMap = new Map(products.data.map((p) => [p.id, p]));
+
+    return prices.data
+      .filter((pr) => pr.recurring)
+      .map((pr) => {
+        const product = productMap.get(pr.product as string);
+        return {
+          product_id: pr.product as string,
+          product_name: product?.name ?? "",
+          product_description: product?.description ?? null,
+          product_metadata: product?.metadata ?? {},
+          price_id: pr.id,
+          unit_amount: pr.unit_amount,
+          currency: pr.currency,
+          recurring: pr.recurring,
+          price_metadata: pr.metadata ?? {},
+        };
+      })
+      .sort((a, b) => (a.unit_amount ?? 0) - (b.unit_amount ?? 0));
   }
 }
 

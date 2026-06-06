@@ -93,6 +93,17 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Public Stripe routes — registered BEFORE Clerk middleware so no auth is required
+app.get("/api/stripe/prices", async (_req, res) => {
+  try {
+    const { stripeStorage } = await import("./stripeStorage.js");
+    const prices = await stripeStorage.listPrices();
+    res.json({ data: prices });
+  } catch (_err) {
+    res.json({ data: [] });
+  }
+});
+
 app.use(
   clerkMiddleware((req) => ({
     publishableKey: publishableKeyFromHost(
