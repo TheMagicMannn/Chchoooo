@@ -5,6 +5,8 @@ import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
 import {
   CLERK_PROXY_PATH,
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware,
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
@@ -35,6 +37,7 @@ app.use(
   }),
 );
 
+app.use(CLERK_NPM_PROXY_PATH, clerkNpmProxyMiddleware());
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 // Stripe webhook — must be registered with express.raw() BEFORE express.json()

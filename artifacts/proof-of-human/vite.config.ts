@@ -19,10 +19,22 @@ const clerkPublishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY
   ?? process.env.CLERK_PUBLISHABLE_KEY
   ?? "";
 
+// In production builds, derive the proxy URL from REPLIT_DOMAINS
+// so Clerk routes its API calls and JS bundle through our own domain.
+const replitDomains = process.env.REPLIT_DOMAINS ?? "";
+const productionDomain =
+  replitDomains.split(",").map((d) => d.trim()).find((d) => d.endsWith(".replit.app"))
+  ?? replitDomains.split(",")[0]?.trim()
+  ?? "";
+const clerkProxyUrl =
+  process.env.VITE_CLERK_PROXY_URL
+  ?? (isBuild && productionDomain ? `https://${productionDomain}/api/__clerk` : "");
+
 export default defineConfig({
   base: basePath,
   define: {
     "import.meta.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify(clerkPublishableKey),
+    "import.meta.env.VITE_CLERK_PROXY_URL": JSON.stringify(clerkProxyUrl),
   },
   plugins: [
     react(),

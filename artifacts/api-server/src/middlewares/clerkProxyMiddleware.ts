@@ -1,21 +1,28 @@
 /**
- * Clerk Frontend API Proxy Middleware
+ * Clerk Frontend API + CDN Proxy Middleware
  *
- * Proxies Clerk Frontend API requests through your domain, enabling Clerk
- * authentication on custom domains and .replit.app deployments without
- * requiring CNAME DNS configuration.
+ * Proxies Clerk requests through your domain so Clerk auth works on
+ * .replit.app and custom domains without CNAME DNS setup.
  *
- * AUTH CONFIGURATION: To manage users, enable/disable login providers
- * (Google, GitHub, etc.), change app branding, or configure OAuth credentials,
- * use the Auth pane in the workspace toolbar. There is no external Clerk
- * dashboard — all auth configuration is done through the Auth pane.
+ * Two proxy paths are registered (order matters — npm must come first):
+ *   /api/__clerk/npm/*  →  https://npm.clerk.dev/*   (Clerk JS bundle)
+ *   /api/__clerk/*      →  https://<fapi-host>/*      (Clerk Frontend API)
+ *
+ * The FAPI host is derived automatically from CLERK_PUBLISHABLE_KEY so no
+ * extra env var is needed.
  *
  * IMPORTANT:
- * - Only active in production (Clerk proxying doesn't work for dev instances)
- * - Must be mounted BEFORE express.json() middleware
+ * - Only active in production (NODE_ENV=production)
+ * - Both middlewares must be mounted BEFORE express.json()
  *
  * Usage in app.ts:
- *   import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
+ *   import {
+ *     CLERK_PROXY_PATH,
+ *     CLERK_NPM_PROXY_PATH,
+ *     clerkNpmProxyMiddleware,
+ *     clerkProxyMiddleware,
+ *   } from "./middlewares/clerkProxyMiddleware";
+ *   app.use(CLERK_NPM_PROXY_PATH, clerkNpmProxyMiddleware());
  *   app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
  */
 
@@ -23,25 +30,32 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 import type { RequestHandler } from "express";
 import type { IncomingHttpHeaders } from "http";
 
-const CLERK_FAPI = "https://frontend-api.clerk.dev";
 export const CLERK_PROXY_PATH = "/api/__clerk";
+export const CLERK_NPM_PROXY_PATH = "/api/__clerk/npm";
+const CLERK_NPM_CDN = "https://npm.clerk.dev";
+
+/**
+ * Derives the Clerk Frontend API URL from a publishable key.
+ * Format: pk_{env}_{base64(fapi_host + "$")}
+ */
+function getFapiFromPublishableKey(pk: string): string {
+  try {
+    const parts = pk.split("_");
+    if (parts.length < 3) return "";
+    const encoded = parts[2];
+    const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
+    const decoded = Buffer.from(padded, "base64").toString("utf-8");
+    const host = decoded.replace(/\$$/, ""); // remove trailing "$" separator
+    return host ? `https://${host}` : "";
+  } catch {
+    return "";
+  }
+}
 
 /**
  * Returns the first effective public hostname for the given request,
  * preferring x-forwarded-host over the Host header so callers behind a
  * proxy see the original client-facing host.
- *
- * x-forwarded-host can take three shapes:
- *   - undefined (no proxy involved)
- *   - a single string (one proxy hop)
- *   - a comma-delimited string when an upstream appended rather than
- *     replaced the header (Node folds duplicate headers this way), or a
- *     string[] in some Express typings
- * In the multi-value case, the leftmost value is the original client-
- * facing host. Take that one in all forms. Exported so that app.ts
- * (clerkMiddleware callback) and this proxy middleware agree on which
- * hostname is canonical — otherwise multi-domain/custom-domain flows
- * break.
  */
 export function getClerkProxyHost(req: {
   headers: IncomingHttpHeaders;
@@ -52,8 +66,30 @@ export function getClerkProxyHost(req: {
   return firstHop || req.headers.host?.trim() || undefined;
 }
 
+/**
+ * Proxies /api/__clerk/npm/* → https://npm.clerk.dev/*
+ * This allows Clerk to load its JS bundle through your domain.
+ * Must be mounted BEFORE clerkProxyMiddleware.
+ */
+export function clerkNpmProxyMiddleware(): RequestHandler {
+  if (process.env.NODE_ENV !== "production") {
+    return (_req, _res, next) => next();
+  }
+
+  return createProxyMiddleware({
+    target: CLERK_NPM_CDN,
+    changeOrigin: true,
+    pathRewrite: (path: string) =>
+      path.replace(new RegExp(`^${CLERK_NPM_PROXY_PATH}`), "/npm"),
+  }) as RequestHandler;
+}
+
+/**
+ * Proxies /api/__clerk/* → https://<clerk-fapi-host>/*
+ * This allows Clerk Frontend API calls to route through your domain.
+ * Must be mounted AFTER clerkNpmProxyMiddleware.
+ */
 export function clerkProxyMiddleware(): RequestHandler {
-  // Only run proxy in production — Clerk proxying doesn't work for dev instances
   if (process.env.NODE_ENV !== "production") {
     return (_req, _res, next) => next();
   }
@@ -63,8 +99,15 @@ export function clerkProxyMiddleware(): RequestHandler {
     return (_req, _res, next) => next();
   }
 
+  const publishableKey = process.env.CLERK_PUBLISHABLE_KEY ?? "";
+  const clerkFapi = getFapiFromPublishableKey(publishableKey);
+
+  if (!clerkFapi) {
+    return (_req, _res, next) => next();
+  }
+
   return createProxyMiddleware({
-    target: CLERK_FAPI,
+    target: clerkFapi,
     changeOrigin: true,
     pathRewrite: (path: string) =>
       path.replace(new RegExp(`^${CLERK_PROXY_PATH}`), ""),
