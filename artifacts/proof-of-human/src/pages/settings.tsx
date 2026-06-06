@@ -12,6 +12,7 @@ export default function SettingsPage() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [plan, setPlan] = useState<string>("free");
   const [domainLimit, setDomainLimit] = useState<number | null>(2);
+  const [tokenLimit, setTokenLimit] = useState<number | null>(3);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -33,7 +34,8 @@ export default function SettingsPage() {
       setDomains(d.domains);
       setPlan(d.plan);
       setDomainLimit(d.domainLimit);
-      setTokens(t);
+      setTokens(t.tokens);
+      setTokenLimit(t.tokenLimit);
       setError("");
     } catch (e: any) {
       setError(e.message || "Failed to load settings");
@@ -259,39 +261,63 @@ export default function SettingsPage() {
 
             {activeTab === "tokens" && (
               <div className="space-y-4">
-                <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-                  <h3 className="font-semibold mb-1">Generate API Token</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Tokens authenticate your ingest calls. Keep them secret — treat like passwords.
-                  </p>
-                  {tokenError && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs px-3 py-2 rounded mb-3">
-                      {tokenError}
+                {(() => {
+                  const atLimit = tokenLimit !== null && tokens.length >= tokenLimit;
+                  return (
+                    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+                      <div className="flex items-start justify-between gap-4 mb-1">
+                        <h3 className="font-semibold">Generate API Token</h3>
+                        {tokenLimit !== null && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            atLimit
+                              ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                              : "bg-secondary text-muted-foreground"
+                          }`}>
+                            {tokens.length} / {tokenLimit} tokens used
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Tokens authenticate your ingest calls. Keep them secret — treat like passwords.
+                        {tokenLimit !== null && <> Free plan is limited to <strong>{tokenLimit} tokens</strong> per account.</>}
+                      </p>
+                      {atLimit && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm px-4 py-3 rounded-lg mb-3 flex items-center justify-between gap-3">
+                          <span>You've reached the {tokenLimit}-token limit for the <strong>{plan}</strong> plan.</span>
+                          <a href="/billing" className="shrink-0 text-xs font-semibold underline hover:text-amber-300">Upgrade →</a>
+                        </div>
+                      )}
+                      {tokenError && (
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs px-3 py-2 rounded mb-3">
+                          {tokenError}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          className="flex-1 bg-secondary border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                          placeholder="Token label (e.g. production, staging)"
+                          value={newTokenLabel}
+                          disabled={atLimit}
+                          onChange={(e) => setNewTokenLabel(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleCreateToken()}
+                        />
+                        <button
+                          onClick={handleCreateToken}
+                          disabled={addingToken || atLimit}
+                          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        >
+                          {addingToken ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                          Generate
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      className="flex-1 bg-secondary border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
-                      placeholder="Token label (e.g. production, staging)"
-                      value={newTokenLabel}
-                      onChange={(e) => setNewTokenLabel(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleCreateToken()}
-                    />
-                    <button
-                      onClick={handleCreateToken}
-                      disabled={addingToken}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 shrink-0"
-                    >
-                      {addingToken ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                      Generate
-                    </button>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-border">
                     <h3 className="font-semibold">API Tokens</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{tokens.length} token{tokens.length !== 1 ? "s" : ""} active</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{tokens.length} token{tokens.length !== 1 ? "s" : ""} active{tokenLimit !== null ? ` · ${tokenLimit - tokens.length} slot${tokenLimit - tokens.length !== 1 ? "s" : ""} remaining` : ""}</p>
                   </div>
                   {tokens.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground text-sm">
