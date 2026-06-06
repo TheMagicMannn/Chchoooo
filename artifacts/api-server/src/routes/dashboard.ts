@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, eventsTable } from "@workspace/db";
-import { eq, and, gte, desc, sql, count } from "drizzle-orm";
+import { eq, and, gte, desc, sql, count, lt } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router = Router();
@@ -72,6 +72,33 @@ router.get("/logs", requireAuth, async (req, res) => {
     res.json({ logs, total: Number(total) });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch logs" });
+  }
+});
+
+router.get("/score-dist", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+
+    const [dist] = await db
+      .select({
+        bucket0: sql<number>`count(*) filter (where ${eventsTable.score} < 0.2)`,
+        bucket1: sql<number>`count(*) filter (where ${eventsTable.score} >= 0.2 and ${eventsTable.score} < 0.4)`,
+        bucket2: sql<number>`count(*) filter (where ${eventsTable.score} >= 0.4 and ${eventsTable.score} < 0.6)`,
+        bucket3: sql<number>`count(*) filter (where ${eventsTable.score} >= 0.6 and ${eventsTable.score} < 0.8)`,
+        bucket4: sql<number>`count(*) filter (where ${eventsTable.score} >= 0.8)`,
+      })
+      .from(eventsTable)
+      .where(eq(eventsTable.userId, userId));
+
+    res.json([
+      { bucket: "0.0–0.2", count: Number(dist?.bucket0 ?? 0) },
+      { bucket: "0.2–0.4", count: Number(dist?.bucket1 ?? 0) },
+      { bucket: "0.4–0.6", count: Number(dist?.bucket2 ?? 0) },
+      { bucket: "0.6–0.8", count: Number(dist?.bucket3 ?? 0) },
+      { bucket: "0.8–1.0", count: Number(dist?.bucket4 ?? 0) },
+    ]);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch score distribution" });
   }
 });
 

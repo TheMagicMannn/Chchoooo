@@ -7,8 +7,18 @@ import { monthlyQuota } from "../middlewares/monthlyQuota";
 import { computeScore } from "../lib/scorer";
 import { dispatchEvent } from "../lib/dispatch";
 import { countryFromRequest } from "../lib/geoip";
+import { z } from "zod";
 
 const router = Router();
+
+const ingestBodySchema = z.object({
+  session_id: z.string().min(1).max(128),
+  domain: z.string().max(253).optional().nullable(),
+  event_type: z.string().max(64).optional().nullable(),
+  referrer: z.string().max(2048).optional().nullable(),
+  duration_ms: z.number().int().nonnegative().max(86_400_000).optional().nullable(),
+  signals: z.record(z.unknown()).optional().nullable(),
+});
 
 router.post("/", requireBearer, tokenRateLimit, monthlyQuota, async (req, res) => {
   try {
@@ -25,6 +35,12 @@ router.post("/", requireBearer, tokenRateLimit, monthlyQuota, async (req, res) =
       return;
     }
 
+    const parsed = ingestBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten().fieldErrors });
+      return;
+    }
+
     const {
       session_id,
       domain,
@@ -32,12 +48,7 @@ router.post("/", requireBearer, tokenRateLimit, monthlyQuota, async (req, res) =
       referrer,
       duration_ms,
       signals,
-    } = req.body;
-
-    if (!session_id) {
-      res.status(400).json({ error: "session_id is required" });
-      return;
-    }
+    } = parsed.data;
 
     const serverUserAgent = req.headers["user-agent"] ?? null;
 

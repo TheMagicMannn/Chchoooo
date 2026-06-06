@@ -197,10 +197,48 @@ function scoreSdkSignals(signals: Partial<SdkSignals>): { score: number; flags: 
 
 // ── Network Context ───────────────────────────────────────────────────────────
 
+const SCRAPER_REFERRER_PATTERNS = [
+  /^https?:\/\/\d+\.\d+\.\d+\.\d+/,  // IP-address referrer
+  /semrush\.com/i,
+  /ahrefs\.com/i,
+  /moz\.com/i,
+  /majestic\.com/i,
+  /similarweb\.com/i,
+  /data\.for\.seo/i,
+  /(?:^|\.)bot\./i,
+  /(?:^|\.)crawl\./i,
+];
+
 function scoreNetworkContext(params: {
   referrer?: string | null;
   domain?: string | null;
 }): { score: number; flags: string[] } {
+  const flags: string[] = [];
+  const { referrer } = params;
+
+  if (!referrer || referrer.trim() === '') {
+    return { score: 1.0, flags: [] };
+  }
+
+  // IP-address referrer is a strong bot indicator
+  if (/^https?:\/\/\d+\.\d+\.\d+\.\d+/.test(referrer)) {
+    flags.push('ip_referrer');
+    return { score: 0.2, flags };
+  }
+
+  for (const pattern of SCRAPER_REFERRER_PATTERNS) {
+    if (pattern.test(referrer)) {
+      flags.push('scraper_referrer');
+      return { score: 0.4, flags };
+    }
+  }
+
+  // Referrer contains bot/crawler keywords
+  if (/[?&](bot|crawler|scraper|spider)=/i.test(referrer)) {
+    flags.push('bot_referrer_param');
+    return { score: 0.3, flags };
+  }
+
   return { score: 1.0, flags: [] };
 }
 

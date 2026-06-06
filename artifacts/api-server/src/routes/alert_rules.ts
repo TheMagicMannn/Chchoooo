@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, alertRulesTable, eventsTable } from "@workspace/db";
-import { eq, and, gte, count, sql } from "drizzle-orm";
+import { eq, and, gte, count, sql, desc, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router = Router();
@@ -107,6 +107,51 @@ router.get("/stats", requireAuth, async (req, res) => {
     });
   } catch {
     res.status(500).json({ error: "Failed to fetch alert stats" });
+  }
+});
+
+router.get("/history", requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const offset = Number(req.query.offset) || 0;
+
+    const events = await db
+      .select({
+        id: eventsTable.id,
+        sessionId: eventsTable.sessionId,
+        verdict: eventsTable.verdict,
+        score: eventsTable.score,
+        domain: eventsTable.domain,
+        eventType: eventsTable.eventType,
+        flags: eventsTable.flags,
+        country: eventsTable.country,
+        createdAt: eventsTable.createdAt,
+      })
+      .from(eventsTable)
+      .where(
+        and(
+          eq(eventsTable.userId, userId),
+          inArray(eventsTable.verdict, ["BOT", "CAPTCHA"]),
+        )
+      )
+      .orderBy(desc(eventsTable.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(eventsTable)
+      .where(
+        and(
+          eq(eventsTable.userId, userId),
+          inArray(eventsTable.verdict, ["BOT", "CAPTCHA"]),
+        )
+      );
+
+    res.json({ events, total: Number(total) });
+  } catch {
+    res.status(500).json({ error: "Failed to fetch alert history" });
   }
 });
 

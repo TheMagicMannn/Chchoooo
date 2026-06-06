@@ -23,8 +23,11 @@ type StatsData = {
   }>;
 };
 
+type ScoreDistBucket = { bucket: string; count: number };
+
 export default function Dashboard() {
   const [stats, setStats] = useState<StatsData | null>(null);
+  const [scoreDist, setScoreDist] = useState<ScoreDistBucket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -32,8 +35,12 @@ export default function Dashboard() {
   const fetchStats = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const data = await api.dashboard.stats();
+      const [data, dist] = await Promise.all([
+        api.dashboard.stats(),
+        api.dashboard.scoreDist(),
+      ]);
       setStats(data);
+      setScoreDist(dist);
       setError("");
     } catch (e: any) {
       setError(e.message || "Failed to load stats");
@@ -62,14 +69,8 @@ export default function Dashboard() {
         }))
     : Array.from({ length: 8 }, (_, i) => ({ time: `${i + 1}`, events: 0, score: 0 }));
 
-  const scoreDistData = hasData
-    ? [
-        { bucket: "0.0–0.2", count: stats.recentEvents.filter((e) => (e.score ?? 0) < 0.2).length },
-        { bucket: "0.2–0.4", count: stats.recentEvents.filter((e) => (e.score ?? 0) >= 0.2 && (e.score ?? 0) < 0.4).length },
-        { bucket: "0.4–0.6", count: stats.recentEvents.filter((e) => (e.score ?? 0) >= 0.4 && (e.score ?? 0) < 0.6).length },
-        { bucket: "0.6–0.8", count: stats.recentEvents.filter((e) => (e.score ?? 0) >= 0.6 && (e.score ?? 0) < 0.8).length },
-        { bucket: "0.8–1.0", count: stats.recentEvents.filter((e) => (e.score ?? 0) >= 0.8).length },
-      ]
+  const scoreDistData = scoreDist.length > 0
+    ? scoreDist
     : [
         { bucket: "0.0–0.2", count: 0 },
         { bucket: "0.2–0.4", count: 0 },

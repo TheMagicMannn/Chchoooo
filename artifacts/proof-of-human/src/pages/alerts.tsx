@@ -11,8 +11,20 @@ type AlertRule = {
   domain: string | null;
   action: string;
   enabled: boolean;
-  triggeredCount: string;
+  triggeredCount: number;
   lastTriggeredAt: string | null;
+  createdAt: string;
+};
+
+type DetectionEvent = {
+  id: number;
+  sessionId: string;
+  verdict: string;
+  score: number | null;
+  domain: string | null;
+  eventType: string;
+  flags: string[] | null;
+  country: string | null;
   createdAt: string;
 };
 
@@ -31,6 +43,10 @@ export default function Alerts() {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
+
+  const [history, setHistory] = useState<DetectionEvent[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const [newName, setNewName] = useState("");
   const [newCondition, setNewCondition] = useState("score_below");
@@ -54,7 +70,21 @@ export default function Alerts() {
     }
   };
 
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const data = await api.alerts.history(50, 0);
+      setHistory(data.events);
+      setHistoryTotal(data.total);
+    } catch {}
+    finally { setHistoryLoading(false); }
+  };
+
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (activeTab === "history" && history.length === 0) loadHistory();
+  }, [activeTab]);
 
   const handleCreate = async () => {
     if (!newName.trim()) { setFormError("Name is required"); return; }
@@ -311,15 +341,83 @@ export default function Alerts() {
         )}
 
         {activeTab === "history" && (
-          <div className="bg-card border border-border rounded-xl p-6 text-center">
-            <CheckCircle2 className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-muted-foreground font-medium">Full alert history</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              View your complete session log in{" "}
-              <a href="/logs" className="text-primary hover:underline">Log Explorer</a>{" "}
-              — filter by verdict BOT or CAPTCHA to see all flagged sessions.
-            </p>
-          </div>
+          historyLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : history.length === 0 ? (
+            <div className="bg-card border border-border rounded-xl p-12 text-center">
+              <CheckCircle2 className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground font-medium">No detections yet</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                BOT and CAPTCHA verdicts will appear here as they are detected.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
+                <span className="text-sm font-medium">Recent Detections</span>
+                <span className="text-xs text-muted-foreground">{historyTotal.toLocaleString()} total</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs uppercase text-muted-foreground border-b border-border/50">
+                    <tr>
+                      <th className="px-4 py-3">Session</th>
+                      <th className="px-4 py-3">Verdict</th>
+                      <th className="px-4 py-3">Score</th>
+                      <th className="px-4 py-3 hidden md:table-cell">Domain</th>
+                      <th className="px-4 py-3 hidden lg:table-cell">Flags</th>
+                      <th className="px-4 py-3 hidden sm:table-cell">Country</th>
+                      <th className="px-4 py-3">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((evt) => (
+                      <tr key={evt.id} className="border-b border-border/20 hover:bg-secondary/50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {evt.sessionId.slice(0, 12)}…
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
+                            evt.verdict === "BOT"
+                              ? "bg-red-500/20 text-red-400"
+                              : "bg-yellow-500/20 text-yellow-400"
+                          }`}>
+                            {evt.verdict}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs">
+                          {(evt.score ?? 0).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                          {evt.domain || "—"}
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <div className="flex flex-wrap gap-1">
+                            {(evt.flags ?? []).slice(0, 3).map((f) => (
+                              <span key={f} className="text-xs bg-secondary px-1.5 py-0.5 rounded font-mono">
+                                {f}
+                              </span>
+                            ))}
+                            {(evt.flags ?? []).length > 3 && (
+                              <span className="text-xs text-muted-foreground">+{(evt.flags ?? []).length - 3}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell text-xs">
+                          {evt.country || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(evt.createdAt).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
         )}
       </div>
     </AppLayout>

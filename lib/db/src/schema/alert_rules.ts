@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, serial, real, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, serial, real, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -11,7 +11,7 @@ export const alertRulesTable = pgTable("alert_rules", {
   domain: text("domain"),
   action: text("action").notNull().default("flag"),
   enabled: boolean("enabled").notNull().default(true),
-  triggeredCount: text("triggered_count").notNull().default("0"),
+  triggeredCount: integer("triggered_count").notNull().default(0),
   lastTriggeredAt: timestamp("last_triggered_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

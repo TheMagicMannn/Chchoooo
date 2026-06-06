@@ -64,14 +64,10 @@ async function evaluateAlertRules(ctx: DispatchContext): Promise<string[]> {
 
     triggeredActions.push(rule.action);
 
-    // Increment triggered_count (stored as text due to schema — parse carefully)
-    const currentCount = parseInt(rule.triggeredCount ?? "0", 10);
-    const newCount = isNaN(currentCount) ? 1 : currentCount + 1;
-
     await db
       .update(alertRulesTable)
       .set({
-        triggeredCount: String(newCount),
+        triggeredCount: (rule.triggeredCount ?? 0) + 1,
         lastTriggeredAt: new Date(),
       })
       .where(eq(alertRulesTable.id, rule.id));

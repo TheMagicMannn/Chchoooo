@@ -38,6 +38,7 @@ export const api = {
     stats: () => apiFetch("/dashboard/stats"),
     logs: (limit = 50, offset = 0) =>
       apiFetch(`/dashboard/logs?limit=${limit}&offset=${offset}`),
+    scoreDist: () => apiFetch("/dashboard/score-dist"),
   },
   analytics: {
     overview: (range = "7d") => apiFetch(`/analytics/overview?range=${range}`),
@@ -58,6 +59,8 @@ export const api = {
   alerts: {
     list: () => apiFetch("/alerts"),
     stats: () => apiFetch("/alerts/stats"),
+    history: (limit = 50, offset = 0) =>
+      apiFetch(`/alerts/history?limit=${limit}&offset=${offset}`),
     create: (data: { name: string; condition: string; threshold: number; domain?: string; action: string }) =>
       apiFetch("/alerts", { method: "POST", body: JSON.stringify(data) }),
     delete: (id: number) => apiFetch(`/alerts/${id}`, { method: "DELETE" }),
