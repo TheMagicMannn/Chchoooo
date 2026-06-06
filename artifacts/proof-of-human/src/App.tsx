@@ -121,7 +121,7 @@ function HomeRedirect() {
       .then((domains: any[]) => {
         setLocation(domains.length === 0 ? "/onboarding" : "/connect", { replace: true });
       })
-      .catch(() => setLocation("/connect", { replace: true }));
+      .catch(() => setLocation("/onboarding", { replace: true }));
   }, [isLoaded, isSignedIn]);
 
   return <Home />;
