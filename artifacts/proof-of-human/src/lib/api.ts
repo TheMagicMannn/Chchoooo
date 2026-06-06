@@ -67,4 +67,11 @@ export const api = {
   billing: {
     usage: () => apiFetch("/billing/usage"),
   },
+  stripe: {
+    prices: () => apiFetch("/stripe/prices"),
+    checkout: (priceId: string) =>
+      apiFetch("/stripe/checkout", { method: "POST", body: JSON.stringify({ priceId }) }),
+    portal: () =>
+      apiFetch("/stripe/portal", { method: "POST" }),
+  },
 };

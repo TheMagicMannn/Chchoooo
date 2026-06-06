@@ -114,21 +114,16 @@ function SignUpPage() {
 function HomeRedirect() {
   const { isSignedIn, isLoaded } = useAuth();
   const [, setLocation] = useLocation();
-  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) { setChecking(false); return; }
+    if (!isLoaded || !isSignedIn) return;
     api.domains.list()
       .then((domains: any[]) => {
         setLocation(domains.length === 0 ? "/onboarding" : "/connect", { replace: true });
       })
-      .catch(() => setLocation("/connect", { replace: true }))
-      .finally(() => setChecking(false));
+      .catch(() => setLocation("/connect", { replace: true }));
   }, [isLoaded, isSignedIn]);
 
-  if (!isLoaded || (isSignedIn && checking)) return null;
-  if (isSignedIn) return null;
   return <Home />;
 }
 

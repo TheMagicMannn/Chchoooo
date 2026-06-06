@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppLayout } from "@/components/app-layout";
-import { CheckCircle2, Download, CreditCard, ArrowRight, Zap, AlertTriangle } from "lucide-react";
+import { CheckCircle2, CreditCard, ArrowRight, Zap, AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface UsageData {
   plan: string;
@@ -14,10 +15,27 @@ interface UsageData {
   resetAt: string;
 }
 
+interface PriceRow {
+  product_id: string;
+  product_name: string;
+  product_description: string | null;
+  product_metadata: Record<string, string> | null;
+  price_id: string;
+  unit_amount: number;
+  currency: string;
+  recurring: { interval: string } | null;
+  price_metadata: Record<string, string> | null;
+}
+
 const PLAN_QUOTAS: Record<string, { label: string; quota: string; price: string; reqMin: string }> = {
   free:       { label: "Free",       quota: "30,000",    price: "$0",       reqMin: "120" },
   growth:     { label: "Growth",     quota: "1,000,000", price: "$49.99",   reqMin: "1,000" },
   enterprise: { label: "Enterprise", quota: "20,000,000",price: "$499.00",  reqMin: "10,000" },
+};
+
+const PLAN_BY_PRODUCT_NAME: Record<string, string> = {
+  "Growth":     "growth",
+  "Enterprise": "enterprise",
 };
 
 function UsageBar({ pct, warn }: { pct: number; warn: boolean }) {
@@ -41,9 +59,18 @@ function resetDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+function fmtPrice(unitAmount: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 0,
+  }).format(unitAmount / 100);
+}
+
 export default function Billing() {
   const [activeTab, setActiveTab] = useState("Plan & Usage");
   const tabs = ["Plan & Usage", "Invoices"];
+  const { toast } = useToast();
 
   const { data: usage, isLoading, isError } = useQuery<UsageData>({
     queryKey: ["billing-usage"],
@@ -51,12 +78,64 @@ export default function Billing() {
     staleTime: 2 * 60 * 1000,
   });
 
-  const plan     = usage?.plan ?? "free";
-  const pct      = usage?.pctUsed ?? 0;
+  const { data: pricesData } = useQuery<{ data: PriceRow[] }>({
+    queryKey: ["stripe-prices"],
+    queryFn: () => api.stripe.prices(),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: async (priceId: string) => {
+      const result = await api.stripe.checkout(priceId);
+      return result as { url: string };
+    },
+    onSuccess: (data) => {
+      if (data.url) window.location.href = data.url;
+    },
+    onError: (err: any) => {
+      toast({ title: "Checkout failed", description: err.message ?? "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const portalMutation = useMutation({
+    mutationFn: async () => {
+      const result = await api.stripe.portal();
+      return result as { url: string };
+    },
+    onSuccess: (data) => {
+      if (data.url) window.location.href = data.url;
+    },
+    onError: (err: any) => {
+      toast({ title: "Portal unavailable", description: err.message ?? "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const plan      = usage?.plan ?? "free";
+  const pct       = usage?.pctUsed ?? 0;
   const nearLimit = pct >= 80;
   const atLimit   = pct >= 100;
-  const isGrowth  = plan === "growth";
   const isFree    = plan === "free";
+  const isGrowth  = plan === "growth";
+
+  const prices = pricesData?.data ?? [];
+
+  function getPriceId(productName: string, interval: "month" | "year" = "month") {
+    const row = prices.find(
+      (p) => p.product_name === productName && p.recurring?.interval === interval,
+    );
+    return row?.price_id ?? null;
+  }
+
+  function handleUpgrade(targetPlan: "growth" | "enterprise") {
+    const productName = targetPlan === "growth" ? "Growth" : "Enterprise";
+    const priceId = getPriceId(productName);
+    if (!priceId) {
+      toast({ title: "Plan unavailable", description: "Stripe products aren't configured yet. Contact support.", variant: "destructive" });
+      return;
+    }
+    checkoutMutation.mutate(priceId);
+  }
 
   return (
     <AppLayout>
@@ -82,7 +161,6 @@ export default function Billing() {
         {activeTab === "Plan & Usage" && (
           <div className="space-y-8 animate-in fade-in duration-300">
 
-            {/* Current plan banner */}
             {isLoading ? (
               <div className="h-16 bg-muted/20 rounded-xl animate-pulse" />
             ) : isError ? (
@@ -111,16 +189,25 @@ export default function Billing() {
                   </p>
                 </div>
                 {(isFree || isGrowth) && (
-                  <button className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap">
-                    {isFree ? "Upgrade to Growth" : "Upgrade to Enterprise"}
-                    <ArrowRight className="w-4 h-4" />
+                  <button
+                    onClick={() => handleUpgrade(isFree ? "growth" : "enterprise")}
+                    disabled={checkoutMutation.isPending}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors whitespace-nowrap disabled:opacity-70"
+                  >
+                    {checkoutMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        {isFree ? "Upgrade to Growth" : "Upgrade to Enterprise"}
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 )}
               </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Usage meters */}
               <div className="space-y-6">
                 <h3 className="font-medium text-lg">Current Usage</h3>
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
@@ -162,7 +249,6 @@ export default function Billing() {
                 </div>
               </div>
 
-              {/* Payment */}
               <div className="space-y-6">
                 <h3 className="font-medium text-lg">Payment & Next Billing</h3>
                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6">
@@ -171,7 +257,12 @@ export default function Billing() {
                       <Zap className="w-8 h-8 text-primary" />
                       <p className="font-medium">You're on the free plan</p>
                       <p className="text-sm text-muted-foreground">No payment method required.</p>
-                      <button className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors">
+                      <button
+                        onClick={() => handleUpgrade("growth")}
+                        disabled={checkoutMutation.isPending}
+                        className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-70 inline-flex items-center gap-2"
+                      >
+                        {checkoutMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                         Upgrade to Growth — $49.99/mo
                       </button>
                     </div>
@@ -187,7 +278,14 @@ export default function Billing() {
                             <div className="text-sm text-muted-foreground">Managed via Stripe</div>
                           </div>
                         </div>
-                        <button className="text-sm font-medium text-primary hover:underline">Manage</button>
+                        <button
+                          onClick={() => portalMutation.mutate()}
+                          disabled={portalMutation.isPending}
+                          className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1 disabled:opacity-70"
+                        >
+                          {portalMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
+                          Manage
+                        </button>
                       </div>
                       <div className="pt-6 border-t border-border">
                         <div className="text-sm text-muted-foreground mb-1">Next billing date</div>
@@ -201,7 +299,6 @@ export default function Billing() {
               </div>
             </div>
 
-            {/* Plan comparison table */}
             <div>
               <h3 className="font-medium text-lg mb-4">Plan Comparison</h3>
               <div className="overflow-x-auto bg-card border border-border rounded-xl shadow-sm">
@@ -231,17 +328,17 @@ export default function Billing() {
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {[
-                      { label: "Events / month",   free: "30,000",    growth: "1,000,000", ent: "20,000,000" },
-                      { label: "Req / min",         free: "120",       growth: "1,000",     ent: "10,000" },
-                      { label: "Sites",             free: "1",         growth: "5",         ent: "Unlimited" },
-                      { label: "Data retention",    free: "30 days",   growth: "90 days",   ent: "Custom" },
-                      { label: "Webhooks",          free: "1",         growth: "10",        ent: "Unlimited" },
-                      { label: "Alert rules",       free: "3",         growth: "25",        ent: "Unlimited" },
-                      { label: "Bot fingerprinting",free: "Basic",     growth: "Advanced",  ent: "Advanced + ML" },
-                      { label: "RBAC",              free: "—",         growth: "—",         ent: "✓" },
-                      { label: "SSO",               free: "—",         growth: "—",         ent: "✓" },
-                      { label: "SLA",               free: "None",      growth: "99.9%",     ent: "99.99%" },
-                      { label: "Support",           free: "Community", growth: "Email",     ent: "Dedicated CSM" },
+                      { label: "Events / month",    free: "30,000",    growth: "1,000,000", ent: "20,000,000" },
+                      { label: "Req / min",          free: "120",       growth: "1,000",     ent: "10,000" },
+                      { label: "Sites",              free: "1",         growth: "5",         ent: "Unlimited" },
+                      { label: "Data retention",     free: "30 days",   growth: "90 days",   ent: "Custom" },
+                      { label: "Webhooks",           free: "1",         growth: "10",        ent: "Unlimited" },
+                      { label: "Alert rules",        free: "3",         growth: "25",        ent: "Unlimited" },
+                      { label: "Bot fingerprinting", free: "Basic",     growth: "Advanced",  ent: "Advanced + ML" },
+                      { label: "RBAC",               free: "—",         growth: "—",         ent: "✓" },
+                      { label: "SSO",                free: "—",         growth: "—",         ent: "✓" },
+                      { label: "SLA",                free: "None",      growth: "99.9%",     ent: "99.99%" },
+                      { label: "Support",            free: "Community", growth: "Email",     ent: "Dedicated CSM" },
                     ].map((row, i) => (
                       <tr key={i} className="hover:bg-muted/5">
                         <td className="px-6 py-3.5 text-muted-foreground">{row.label}</td>
@@ -253,8 +350,36 @@ export default function Billing() {
                     <tr className="bg-muted/10 border-t-2 border-t-border">
                       <td className="px-6 py-4 text-muted-foreground font-medium">Price</td>
                       <td className={`px-6 py-4 font-bold ${plan === "free" ? "border-l border-r border-primary/30 bg-primary/10 text-primary" : "font-medium"}`}>Free</td>
-                      <td className={`px-6 py-4 font-bold ${plan === "growth" ? "border-l border-r border-primary/30 bg-primary/10 text-primary" : "font-medium"}`}>$49.99/mo</td>
-                      <td className={`px-6 py-4 font-bold ${plan === "enterprise" ? "border-l border-r border-primary/30 bg-primary/10 text-primary" : "font-medium"}`}>$499/mo</td>
+                      <td className={`px-6 py-4 ${plan === "growth" ? "border-l border-r border-primary/30 bg-primary/10 text-primary font-bold" : "font-medium"}`}>
+                        <div className="flex flex-col gap-1">
+                          <span>$49.99/mo</span>
+                          {plan !== "growth" && (
+                            <button
+                              onClick={() => handleUpgrade("growth")}
+                              disabled={checkoutMutation.isPending}
+                              className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-primary/10 text-primary hover:bg-primary/20 rounded transition-colors disabled:opacity-50 w-fit"
+                            >
+                              {checkoutMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                              Upgrade
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className={`px-6 py-4 ${plan === "enterprise" ? "border-l border-r border-primary/30 bg-primary/10 text-primary font-bold" : "font-medium"}`}>
+                        <div className="flex flex-col gap-1">
+                          <span>$499/mo</span>
+                          {plan !== "enterprise" && (
+                            <button
+                              onClick={() => handleUpgrade("enterprise")}
+                              disabled={checkoutMutation.isPending}
+                              className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-primary/10 text-primary hover:bg-primary/20 rounded transition-colors disabled:opacity-50 w-fit"
+                            >
+                              {checkoutMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                              Upgrade
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -265,11 +390,27 @@ export default function Billing() {
 
         {activeTab === "Invoices" && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="bg-muted/10 border border-border/50 rounded-xl p-8 text-center text-muted-foreground">
-              <CreditCard className="w-8 h-8 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">Invoice history</p>
-              <p className="text-sm mt-1">Available once Stripe billing is connected.</p>
-            </div>
+            {plan === "free" ? (
+              <div className="bg-muted/10 border border-border/50 rounded-xl p-8 text-center text-muted-foreground">
+                <CreditCard className="w-8 h-8 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">No invoices yet</p>
+                <p className="text-sm mt-1">Invoices appear here once you subscribe to a paid plan.</p>
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-xl p-8 text-center">
+                <CreditCard className="w-8 h-8 mx-auto mb-3 text-primary" />
+                <p className="font-medium mb-2">View your invoices in the Stripe portal</p>
+                <p className="text-sm text-muted-foreground mb-4">All invoices, payment history, and receipts are available in your billing portal.</p>
+                <button
+                  onClick={() => portalMutation.mutate()}
+                  disabled={portalMutation.isPending}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-70"
+                >
+                  {portalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+                  Open Billing Portal
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

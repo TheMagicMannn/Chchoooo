@@ -8,6 +8,8 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull(),
   name: text("name"),
   plan: text("plan").notNull().default("free"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

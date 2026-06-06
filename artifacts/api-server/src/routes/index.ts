@@ -8,6 +8,7 @@ import analyticsRouter from "./analytics";
 import webhooksRouter from "./webhooks";
 import alertRulesRouter from "./alert_rules";
 import billingRouter from "./billing";
+import stripeBillingRouter from "./stripe_billing";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/analytics", analyticsRouter);
 router.use("/webhooks", webhooksRouter);
 router.use("/alerts", alertRulesRouter);
 router.use("/billing", billingRouter);
+router.use("/stripe", stripeBillingRouter);
 
 export default router;
