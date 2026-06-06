@@ -8,6 +8,10 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { ThemeProvider } from "@/components/theme-provider";
 
 import Home from "@/pages/home";
+import Features from "@/pages/features";
+import Pricing from "@/pages/pricing";
+import Resources from "@/pages/resources";
+import Support from "@/pages/support";
 import Architecture from "@/pages/architecture";
 import Docs from "@/pages/docs";
 import Dashboard from "@/pages/dashboard";
@@ -160,6 +164,10 @@ function Router() {
       <Route path="/" component={HomeRedirect} />
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
+      <Route path="/features" component={Features} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/resources" component={Resources} />
+      <Route path="/support" component={Support} />
       <Route path="/architecture" component={Architecture} />
       <Route path="/docs" component={Docs} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
