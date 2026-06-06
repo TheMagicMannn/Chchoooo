@@ -1,2 +1,5 @@
 - [Subagent JSX pitfalls](subagent-jsx-pitfalls.md) — subagents write React.Fragment without import and use template literals in JSX; known fixes documented.
 - [Clerk + Tailwind v4 setup](clerk-tailwind-v4.md) — layer declaration + optimize:false required for Clerk CSS to work in prod builds; lib/db needs tsc --build before API typecheck passes.
+- [API server health check path](api-health-check.md) — Replit probes GET /api; health router must handle GET / (not just /healthz) or repeated 500s trigger SIGTERM.
+- [clerkClient v2 API](clerk-client-v2.md) — @clerk/express v2 exports clerkClient as a pre-built instance, not a factory; calling clerkClient() throws.
+- [Drizzle date_trunc parameterization](drizzle-date-trunc.md) — PostgreSQL date_trunc requires a string literal first arg; use sql.raw("'hour'") not ${truncUnit} inside sql template or PG rejects the query.
