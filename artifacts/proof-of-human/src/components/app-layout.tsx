@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { BarChart2, ShieldAlert, BellRing, Plug2, Settings, CreditCard, Building2, FileText, FileBarChart2, User, Menu, X, LogOut, Loader2 } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
+import { Logo } from "@/components/logo";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -83,12 +84,7 @@ function NavContent({ location, onClose }: { location: string; onClose?: () => v
       <div className="flex flex-col h-full">
         <div className="px-3 pt-4 pb-3 border-b border-border/40">
           <Link href="/">
-            <img
-              src="/logo.png"
-              alt="Proof of Human Analytics"
-              className="h-[56px] w-auto max-w-[200px]"
-              style={{ filter: "hue-rotate(-30deg) saturate(2.5) brightness(1.35)" }}
-            />
+            <Logo size="md" />
           </Link>
         </div>
         <nav className="flex-1 px-2 space-y-1 pb-4 overflow-y-auto">

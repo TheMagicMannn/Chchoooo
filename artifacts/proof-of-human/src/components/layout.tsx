@@ -4,6 +4,7 @@ import { Moon, Sun, Download, Box, Activity, BookOpen, ShieldCheck, Zap, BarChar
 import { useTheme } from "./theme-provider";
 import { FULL_MARKDOWN_DOCS } from "@/lib/content";
 import { GlobalSearch } from "./search";
+import { Logo } from "./logo";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { theme, setTheme } = useTheme();
@@ -39,12 +40,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <div className="container mx-auto flex h-14 items-center justify-between px-4 gap-4">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center shrink-0">
-              <img
-                src="/logo.png"
-                alt="Proof of Human Analytics"
-                className="h-[56px] w-auto"
-                style={{ filter: "hue-rotate(-30deg) saturate(2.5) brightness(1.35)" }}
-              />
+              <Logo size="md" />
             </Link>
             <nav className="hidden lg:flex items-center gap-1">
               {saasNavItems.map((item) => (
