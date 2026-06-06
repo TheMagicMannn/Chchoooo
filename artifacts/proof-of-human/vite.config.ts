@@ -4,30 +4,32 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
+const isBuild = process.argv.includes("build");
+
 const rawPort = process.env.PORT;
+const port = rawPort ? Number(rawPort) : 5000;
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
+if (!isBuild && (Number.isNaN(port) || port <= 0)) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const basePath = process.env.BASE_PATH;
+const basePath = process.env.BASE_PATH ?? "/";
 
-if (!basePath) {
-  throw new Error(
-    "BASE_PATH environment variable is required but was not provided.",
-  );
-}
+const clerkPublishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY
+  ?? process.env.CLERK_PUBLISHABLE_KEY
+  ?? "";
+
+const replitDomains = process.env.REPLIT_DOMAINS ?? "";
+const primaryDomain = replitDomains.split(",")[0]?.trim() ?? "";
+const clerkProxyUrl = process.env.VITE_CLERK_PROXY_URL
+  ?? (primaryDomain ? `https://${primaryDomain}/api/__clerk` : "");
 
 export default defineConfig({
   base: basePath,
+  define: {
+    "import.meta.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify(clerkPublishableKey),
+    "import.meta.env.VITE_CLERK_PROXY_URL": JSON.stringify(clerkProxyUrl),
+  },
   plugins: [
     react(),
     tailwindcss({ optimize: false }),
