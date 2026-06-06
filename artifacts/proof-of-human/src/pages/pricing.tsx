@@ -1,23 +1,23 @@
 import { Link } from "wouter";
 import { PublicLayout } from "@/components/public-layout";
-import { CheckCircle, ArrowRight, Zap } from "lucide-react";
+import { CheckCircle, ArrowRight, Zap, X, Check, Minus } from "lucide-react";
 
 const plans = [
   {
     name: "Free",
     price: "$0",
     period: "forever",
-    desc: "Perfect for personal projects, developers evaluating the platform, and small sites just getting started.",
+    desc: "Perfect for developers evaluating the platform and small sites just getting started.",
     highlight: false,
     cta: "Start Free",
     ctaHref: "/sign-up",
-    sessions: "50,000 sessions/month",
     features: [
-      "Up to 50,000 scored sessions/month",
+      "30,000 events / month",
+      "2 domains",
+      "3 API tokens",
+      "120 requests / min",
       "Real-time session scoring",
       "Traffic quality dashboard",
-      "1 domain",
-      "API token management",
       "Log explorer (7-day retention)",
       "GTM, WordPress & JS integration",
       "REST API access",
@@ -28,15 +28,16 @@ const plans = [
     name: "Growth",
     price: "$49",
     period: "per month",
-    desc: "For growing businesses that need higher volume, longer data history, and priority support.",
+    desc: "For growing businesses that need higher volume, more domains, and priority support.",
     highlight: true,
     cta: "Start Free Trial",
     ctaHref: "/sign-up",
-    sessions: "1,000,000 sessions/month",
     features: [
-      "Up to 1,000,000 scored sessions/month",
+      "1,000,000 events / month",
+      "Up to 15 domains",
+      "Up to 20 API tokens",
+      "1,000 requests / min",
       "Everything in Free",
-      "Up to 10 domains",
       "Custom alert rules",
       "Webhook delivery",
       "Geographic breakdown analytics",
@@ -50,54 +51,89 @@ const plans = [
     name: "Enterprise",
     price: "Custom",
     period: "contact us",
-    desc: "For organizations with high-volume traffic, compliance needs, SLA requirements, or custom integration work.",
+    desc: "For organizations with high-volume traffic, compliance needs, or custom integration work.",
     highlight: false,
     cta: "Contact Sales",
     ctaHref: "/support",
-    sessions: "Unlimited sessions",
     features: [
-      "Unlimited scored sessions",
-      "Everything in Growth",
+      "20,000,000+ events / month",
       "Unlimited domains",
+      "Unlimited API tokens",
+      "10,000 requests / min",
+      "Everything in Growth",
       "90-day log retention",
       "Dedicated account manager",
       "Custom SLA",
       "SSO / SAML",
       "Custom webhook schemas",
-      "Advanced reporting",
       "On-boarding & integration support",
     ],
   },
 ];
 
+type CellValue = string | boolean | null;
+
+const comparison: { label: string; free: CellValue; growth: CellValue; enterprise: CellValue }[] = [
+  { label: "Events / month",     free: "30,000",      growth: "1,000,000",   enterprise: "20,000,000+" },
+  { label: "Domains",            free: "2",           growth: "15",          enterprise: "Unlimited" },
+  { label: "API tokens",         free: "3",           growth: "20",          enterprise: "Unlimited" },
+  { label: "Rate limit",         free: "120 req/min", growth: "1,000 req/min", enterprise: "10,000 req/min" },
+  { label: "Log retention",      free: "7 days",      growth: "30 days",     enterprise: "90 days" },
+  { label: "Real-time scoring",  free: true,          growth: true,          enterprise: true },
+  { label: "Alert rules",        free: true,          growth: true,          enterprise: true },
+  { label: "Webhook delivery",   free: false,         growth: true,          enterprise: true },
+  { label: "CSV export",         free: false,         growth: true,          enterprise: true },
+  { label: "Geographic analytics", free: false,       growth: true,          enterprise: true },
+  { label: "SSO / SAML",         free: false,         growth: false,         enterprise: true },
+  { label: "Custom SLA",         free: false,         growth: false,         enterprise: true },
+  { label: "Dedicated manager",  free: false,         growth: false,         enterprise: true },
+  { label: "Support",            free: "Community",   growth: "Priority email", enterprise: "Dedicated" },
+];
+
+function Cell({ value, highlight }: { value: CellValue; highlight?: boolean }) {
+  if (value === true)
+    return <Check className={`h-4 w-4 mx-auto ${highlight ? "text-primary" : "text-green-500"}`} />;
+  if (value === false)
+    return <X className="h-4 w-4 mx-auto text-muted-foreground/30" />;
+  if (value === null)
+    return <Minus className="h-4 w-4 mx-auto text-muted-foreground/30" />;
+  return (
+    <span className={`text-sm font-medium ${highlight ? "text-primary" : ""}`}>{value}</span>
+  );
+}
+
 const faq = [
   {
-    q: "What counts as a session?",
-    a: "A session is one visit to your website — from the moment a user lands to when they leave or go idle. Each session generates one score. Page views within a session don't count as separate sessions.",
+    q: "What counts as an event?",
+    a: "An event is one scored request sent to the Proof of Human ingest API — typically one page visit or session check. Each event generates one bot-detection score.",
   },
   {
     q: "Do I need a credit card to sign up?",
     a: "No. The Free plan requires no payment information. You only need a card when you upgrade to Growth.",
   },
   {
-    q: "What happens if I exceed my monthly session limit?",
-    a: "We'll notify you before you hit your limit. Sessions beyond the limit continue to be collected and scored — you won't lose data. You'll just be prompted to upgrade.",
+    q: "What happens if I exceed my monthly event limit?",
+    a: "Ingest requests beyond your monthly quota return a 429 status code. Your existing data and dashboard remain fully accessible — you just can't score new events until the next billing cycle or until you upgrade.",
+  },
+  {
+    q: "What happens if I exceed my rate limit?",
+    a: "Requests over your per-minute rate limit return a 429 with a Retry-After header. The limit resets every 60 seconds, so bursts are handled gracefully.",
+  },
+  {
+    q: "Can I add more domains than my plan allows?",
+    a: "No — domain limits are enforced per account. Free accounts are capped at 2 domains, Growth at 15. All domains on an account share the same event pool and rate limit.",
   },
   {
     q: "Can I change plans anytime?",
-    a: "Yes. Upgrade or downgrade at any time. Upgrades take effect immediately. Downgrades take effect at the start of your next billing cycle.",
-  },
-  {
-    q: "Are all features available on every plan?",
-    a: "Yes. Feature access is not gated by plan tier. All plans get the complete Proof of Human feature set. Plans differ only in session volume, domain count, and data retention window.",
+    a: "Yes. Upgrades take effect immediately. Downgrades take effect at the start of your next billing cycle.",
   },
   {
     q: "Is there a free trial of the Growth plan?",
-    a: "Yes — every new account gets a 14-day trial of Growth features with no credit card required. After 14 days, accounts roll back to the Free plan unless upgraded.",
+    a: "Yes — every new account gets a 14-day trial of Growth features with no credit card required. After 14 days accounts roll back to Free unless upgraded.",
   },
   {
     q: "How does billing work?",
-    a: "Growth is billed monthly. You can cancel at any time — no lock-in contracts. Enterprise contracts are negotiated based on volume and requirements.",
+    a: "Growth is billed monthly with no lock-in contracts. Enterprise contracts are negotiated based on volume and requirements.",
   },
   {
     q: "Do you offer discounts for non-profits or startups?",
@@ -120,12 +156,12 @@ export default function Pricing() {
             Start free. Scale as you grow.
           </h1>
           <p className="text-lg text-muted-foreground">
-            Every plan includes all features. Pay only for the session volume
-            you need. No hidden fees, no feature gates.
+            All plans include real-time scoring, alert rules, and full API access.
+            Limits vary by plan — no hidden fees.
           </p>
         </section>
 
-        {/* PLANS */}
+        {/* PLAN CARDS */}
         <section className="w-full max-w-6xl mx-auto px-4 pb-20">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             {plans.map((plan) => (
@@ -146,17 +182,9 @@ export default function Pricing() {
                   <h2 className="text-xl font-bold mb-1">{plan.name}</h2>
                   <div className="flex items-end gap-1.5 mb-3">
                     <span className="text-4xl font-extrabold">{plan.price}</span>
-                    <span className="text-muted-foreground text-sm mb-1">
-                      {plan.period}
-                    </span>
+                    <span className="text-muted-foreground text-sm mb-1">{plan.period}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {plan.desc}
-                  </p>
-                </div>
-
-                <div className="bg-secondary/50 rounded-lg px-4 py-2.5 text-sm font-semibold text-center mb-6">
-                  {plan.sessions}
+                  <p className="text-sm text-muted-foreground leading-relaxed">{plan.desc}</p>
                 </div>
 
                 <Link
@@ -187,43 +215,54 @@ export default function Pricing() {
           </div>
         </section>
 
-        {/* COMPARISON NOTE */}
-        <section className="w-full bg-secondary/20 py-16">
-          <div className="max-w-3xl mx-auto px-4 text-center">
-            <h2 className="text-2xl font-bold mb-4">
-              All features. All plans.
-            </h2>
-            <p className="text-muted-foreground leading-relaxed mb-6">
-              We don't believe in locking you out of features to force an
-              upgrade. Real-time scoring, alert rules, webhooks, CSV export,
-              risk scoring, geographic analytics — everything is available from
-              the Free plan. The only variable is how many sessions you can
-              score each month and how long we retain your logs.
-            </p>
-            <Link
-              href="/features"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
-            >
-              See the full feature list <ArrowRight className="h-4 w-4" />
-            </Link>
+        {/* COMPARISON TABLE */}
+        <section className="w-full max-w-5xl mx-auto px-4 pb-24">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-10">Compare plans</h2>
+          <div className="rounded-2xl border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary/40">
+                  <th className="text-left px-6 py-4 font-semibold w-1/2">Feature</th>
+                  <th className="text-center px-4 py-4 font-semibold">Free</th>
+                  <th className="text-center px-4 py-4 font-semibold text-primary bg-primary/5">Growth</th>
+                  <th className="text-center px-4 py-4 font-semibold">Enterprise</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparison.map((row, i) => (
+                  <tr
+                    key={row.label}
+                    className={`border-b border-border/50 last:border-0 ${
+                      i % 2 === 0 ? "bg-card" : "bg-secondary/10"
+                    }`}
+                  >
+                    <td className="px-6 py-3.5 text-muted-foreground">{row.label}</td>
+                    <td className="px-4 py-3.5 text-center">
+                      <Cell value={row.free} />
+                    </td>
+                    <td className="px-4 py-3.5 text-center bg-primary/5">
+                      <Cell value={row.growth} highlight />
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      <Cell value={row.enterprise} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
 
         {/* FAQ */}
-        <section className="w-full max-w-3xl mx-auto px-4 py-20">
+        <section className="w-full max-w-3xl mx-auto px-4 pb-20">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-12">
             Frequently asked questions
           </h2>
           <div className="flex flex-col gap-6">
             {faq.map((item) => (
-              <div
-                key={item.q}
-                className="border border-border rounded-xl p-6"
-              >
+              <div key={item.q} className="border border-border rounded-xl p-6">
                 <h3 className="font-semibold mb-2">{item.q}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {item.a}
-                </p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
               </div>
             ))}
           </div>
@@ -232,12 +271,9 @@ export default function Pricing() {
         {/* CTA */}
         <section className="w-full max-w-3xl mx-auto px-4 pb-24 text-center">
           <div className="bg-primary/5 border border-primary/20 rounded-2xl p-10">
-            <h2 className="text-2xl font-bold mb-3">
-              Still have questions?
-            </h2>
+            <h2 className="text-2xl font-bold mb-3">Still have questions?</h2>
             <p className="text-muted-foreground mb-6">
-              Our team is happy to walk you through the right plan for your
-              situation.
+              Our team is happy to walk you through the right plan for your situation.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               <Link
@@ -255,6 +291,7 @@ export default function Pricing() {
             </div>
           </div>
         </section>
+
       </div>
     </PublicLayout>
   );
