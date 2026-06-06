@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { Command, Moon, Sun, Download, Terminal, LayoutDashboard, Component, Box, Activity, BookOpen, ShieldCheck, Zap, BarChart2 } from "lucide-react";
+import { Moon, Sun, Download, Box, Activity, BookOpen, ShieldCheck, Zap, BarChart2 } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { FULL_MARKDOWN_DOCS } from "@/lib/content";
 import { GlobalSearch } from "./search";
@@ -38,9 +38,13 @@ export function Layout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-14 items-center justify-between px-4 gap-4">
           <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2 font-bold tracking-tight text-primary">
-              <Command className="h-5 w-5" />
-              <span className="hidden sm:inline-block">Proof of Human</span>
+            <Link href="/" className="flex items-center shrink-0">
+              <img
+                src="/logo.png"
+                alt="Proof of Human Analytics"
+                className="h-[56px] w-auto"
+                style={{ filter: "hue-rotate(-30deg) saturate(2.5) brightness(1.35)" }}
+              />
             </Link>
             <nav className="hidden lg:flex items-center gap-1">
               {saasNavItems.map((item) => (

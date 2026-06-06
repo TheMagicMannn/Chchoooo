@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShieldCheck, Menu, X, ArrowRight } from "lucide-react";
+import { Menu, X, ArrowRight } from "lucide-react";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -18,12 +18,13 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto flex h-16 items-center justify-between px-4 md:px-6">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-bold tracking-tight text-primary shrink-0"
-          >
-            <ShieldCheck className="h-6 w-6" />
-            <span className="text-lg">Proof of Human</span>
+          <Link href="/" className="shrink-0 flex items-center">
+            <img
+              src="/logo.png"
+              alt="Proof of Human Analytics"
+              className="h-[60px] w-auto"
+              style={{ filter: "hue-rotate(-30deg) saturate(2.5) brightness(1.35)" }}
+            />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -123,12 +124,13 @@ export function PublicLayout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-10">
             <div className="col-span-2 md:col-span-1">
-              <Link
-                href="/"
-                className="flex items-center gap-2 font-bold text-primary mb-3"
-              >
-                <ShieldCheck className="h-5 w-5" />
-                <span>Proof of Human</span>
+              <Link href="/" className="flex items-center mb-3">
+                <img
+                  src="/logo.png"
+                  alt="Proof of Human Analytics"
+                  className="h-10 w-auto"
+                  style={{ filter: "hue-rotate(-30deg) saturate(2.5) brightness(1.35)" }}
+                />
               </Link>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Real-time bot detection and traffic quality analytics for your

@@ -81,8 +81,15 @@ function NavContent({ location, onClose }: { location: string; onClose?: () => v
       )}
 
       <div className="flex flex-col h-full">
-        <div className="text-xs uppercase text-muted-foreground/60 tracking-widest px-4 py-3 font-semibold mt-2">
-          App
+        <div className="px-3 pt-4 pb-3 border-b border-border/40">
+          <Link href="/">
+            <img
+              src="/logo.png"
+              alt="Proof of Human Analytics"
+              className="h-[56px] w-auto max-w-[200px]"
+              style={{ filter: "hue-rotate(-30deg) saturate(2.5) brightness(1.35)" }}
+            />
+          </Link>
         </div>
         <nav className="flex-1 px-2 space-y-1 pb-4 overflow-y-auto">
           {navItems.map((item) => (
