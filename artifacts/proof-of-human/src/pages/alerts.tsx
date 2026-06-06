@@ -185,8 +185,8 @@ export default function Alerts() {
                   onChange={(e) => setNewCondition(e.target.value)}
                 >
                   <option value="score_below">Score below threshold</option>
-                  <option value="verdict_bot">Verdict is BOT</option>
-                  <option value="verdict_captcha">Verdict is CAPTCHA</option>
+                  <option value="bot_detected">Verdict is BOT</option>
+                  <option value="captcha_required">Verdict is CAPTCHA</option>
                 </select>
               </div>
               <div>
@@ -278,8 +278,10 @@ export default function Alerts() {
                       <div className="text-xs text-muted-foreground mt-0.5">
                         {rule.condition === "score_below"
                           ? `Score below ${rule.threshold}`
-                          : rule.condition === "verdict_bot" ? "Verdict is BOT"
-                          : "Verdict is CAPTCHA"}
+                          : rule.condition === "bot_detected" ? "Verdict is BOT"
+                          : rule.condition === "captcha_required" ? "Verdict is CAPTCHA"
+                          : rule.condition === "score_above" ? `Score above ${rule.threshold}`
+                          : rule.condition}
                         {" → "}{rule.action}
                         {rule.domain ? ` · ${rule.domain}` : " · All domains"}
                       </div>

@@ -95,6 +95,18 @@ export default function Ops() {
           </div>
         </div>
 
+        <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-amber-400">Demonstration Data</p>
+            <p className="text-xs text-amber-400/80 mt-0.5">
+              This console displays simulated infrastructure metrics for UI preview purposes. Real-time host telemetry, Kafka consumer lag, ClickHouse write rates, and system logs shown here are illustrative and do not reflect live infrastructure state. Production observability is handled via your internal monitoring stack.
+            </p>
+          </div>
+        </div>
+
         <div className="flex space-x-2 border-b border-border/40 mb-6">
           {tabs.map((t) => (
             <button
