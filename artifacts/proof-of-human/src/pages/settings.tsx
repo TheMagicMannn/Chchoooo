@@ -10,6 +10,8 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<"domains" | "tokens">("domains");
   const [domains, setDomains] = useState<Domain[]>([]);
   const [tokens, setTokens] = useState<Token[]>([]);
+  const [plan, setPlan] = useState<string>("free");
+  const [domainLimit, setDomainLimit] = useState<number | null>(2);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -28,7 +30,9 @@ export default function SettingsPage() {
     setLoading(true);
     try {
       const [d, t] = await Promise.all([api.domains.list(), api.tokens.list()]);
-      setDomains(d);
+      setDomains(d.domains);
+      setPlan(d.plan);
+      setDomainLimit(d.domainLimit);
       setTokens(t);
       setError("");
     } catch (e: any) {
@@ -158,39 +162,63 @@ export default function SettingsPage() {
           <>
             {activeTab === "domains" && (
               <div className="space-y-4">
-                <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
-                  <h3 className="font-semibold mb-1">Add Domain</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Register a domain to start sending events from it via your API token.
-                  </p>
-                  {domainError && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs px-3 py-2 rounded mb-3">
-                      {domainError}
+                {(() => {
+                  const atLimit = domainLimit !== null && domains.length >= domainLimit;
+                  return (
+                    <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+                      <div className="flex items-start justify-between gap-4 mb-1">
+                        <h3 className="font-semibold">Add Domain</h3>
+                        {domainLimit !== null && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            atLimit
+                              ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                              : "bg-secondary text-muted-foreground"
+                          }`}>
+                            {domains.length} / {domainLimit} domains used
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Register a domain to start sending events from it via your API token.
+                        {domainLimit !== null && <> Free plan is limited to <strong>{domainLimit} domains</strong> per account.</>}
+                      </p>
+                      {atLimit && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm px-4 py-3 rounded-lg mb-3 flex items-center justify-between gap-3">
+                          <span>You've reached the {domainLimit}-domain limit for the <strong>{plan}</strong> plan.</span>
+                          <a href="/billing" className="shrink-0 text-xs font-semibold underline hover:text-amber-300">Upgrade →</a>
+                        </div>
+                      )}
+                      {domainError && (
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs px-3 py-2 rounded mb-3">
+                          {domainError}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <input
+                          className="flex-1 bg-secondary border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                          placeholder="yoursite.com"
+                          value={newDomain}
+                          disabled={atLimit}
+                          onChange={(e) => { setNewDomain(e.target.value); setDomainError(""); }}
+                          onKeyDown={(e) => e.key === "Enter" && handleAddDomain()}
+                        />
+                        <button
+                          onClick={handleAddDomain}
+                          disabled={addingDomain || atLimit}
+                          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                        >
+                          {addingDomain ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                          Add
+                        </button>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex gap-2">
-                    <input
-                      className="flex-1 bg-secondary border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
-                      placeholder="yoursite.com"
-                      value={newDomain}
-                      onChange={(e) => { setNewDomain(e.target.value); setDomainError(""); }}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddDomain()}
-                    />
-                    <button
-                      onClick={handleAddDomain}
-                      disabled={addingDomain}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:opacity-50 shrink-0"
-                    >
-                      {addingDomain ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                      Add
-                    </button>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-border">
                     <h3 className="font-semibold">Registered Domains</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{domains.length} domain{domains.length !== 1 ? "s" : ""} registered</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{domains.length} domain{domains.length !== 1 ? "s" : ""} registered{domainLimit !== null ? ` · ${domainLimit - domains.length} slot${domainLimit - domains.length !== 1 ? "s" : ""} remaining` : ""}</p>
                   </div>
                   {domains.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground text-sm">

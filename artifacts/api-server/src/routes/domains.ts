@@ -1,20 +1,32 @@
 import { Router } from "express";
-import { db, domainsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, domainsTable, usersTable } from "@workspace/db";
+import { eq, and, count } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth";
 import { randomUUID } from "crypto";
 import { promises as dns } from "dns";
+
+const DOMAIN_LIMITS: Record<string, number> = {
+  free:       2,
+  growth:     Infinity,
+  enterprise: Infinity,
+};
 
 const router = Router();
 
 router.get("/", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).userId;
-    const domains = await db
-      .select()
-      .from(domainsTable)
-      .where(eq(domainsTable.userId, userId));
-    res.json(domains);
+    const [domains, planRows] = await Promise.all([
+      db.select().from(domainsTable).where(eq(domainsTable.userId, userId)),
+      db.select({ plan: usersTable.plan }).from(usersTable).where(eq(usersTable.id, userId)).limit(1),
+    ]);
+    const plan = planRows[0]?.plan ?? "free";
+    const domainLimit = DOMAIN_LIMITS[plan] ?? 2;
+    res.json({
+      domains,
+      plan,
+      domainLimit: domainLimit === Infinity ? null : domainLimit,
+    });
   } catch {
     res.status(500).json({ error: "Failed to fetch domains" });
   }
@@ -28,6 +40,25 @@ router.post("/", requireAuth, async (req, res) => {
       res.status(400).json({ error: "domain is required" });
       return;
     }
+
+    // Enforce per-plan domain limit
+    const [planRows, countRows] = await Promise.all([
+      db.select({ plan: usersTable.plan }).from(usersTable).where(eq(usersTable.id, userId)).limit(1),
+      db.select({ total: count() }).from(domainsTable).where(eq(domainsTable.userId, userId)),
+    ]);
+    const plan = planRows[0]?.plan ?? "free";
+    const limit = DOMAIN_LIMITS[plan] ?? 2;
+    const current = Number(countRows[0]?.total ?? 0);
+    if (current >= limit) {
+      res.status(403).json({
+        error: `Your ${plan} plan allows up to ${limit} domain${limit === 1 ? "" : "s"}. Upgrade to add more.`,
+        plan,
+        limit,
+        upgrade_url: "/billing",
+      });
+      return;
+    }
+
     const verificationToken = randomUUID().replace(/-/g, "");
     const [row] = await db
       .insert(domainsTable)
