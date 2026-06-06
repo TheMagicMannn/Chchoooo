@@ -383,6 +383,22 @@
 
   // ── Send ──────────────────────────────────────────────────────────────────────
 
+  function dispatchVerdict(result) {
+    try {
+      document.dispatchEvent(new CustomEvent('poh:verdict', {
+        bubbles: true,
+        detail: {
+          sessionId: SESSION,
+          score:     result.score,
+          verdict:   result.verdict,
+          flags:     result.flags || [],
+          eventType: 'page_view',
+        },
+      }));
+      if (typeof cfg.onVerdict === 'function') cfg.onVerdict(result);
+    } catch(e) {}
+  }
+
   function send(sig, keepalive) {
     var body = JSON.stringify({
       session_id:  SESSION,
@@ -398,6 +414,10 @@
         headers:   { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
         body:      body,
         keepalive: !!keepalive,
+      }).then(function(res) {
+        if (res.ok) return res.json();
+      }).then(function(data) {
+        if (data) dispatchVerdict(data);
       }).catch(function(){});
     } catch(e) {}
   }

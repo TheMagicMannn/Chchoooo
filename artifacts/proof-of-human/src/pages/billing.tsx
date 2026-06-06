@@ -330,8 +330,8 @@ export default function Billing() {
                     {[
                       { label: "Events / month",    free: "30,000",    growth: "1,000,000", ent: "20,000,000" },
                       { label: "Req / min",          free: "120",       growth: "1,000",     ent: "10,000" },
-                      { label: "Sites",              free: "1",         growth: "5",         ent: "Unlimited" },
-                      { label: "Data retention",     free: "30 days",   growth: "90 days",   ent: "Custom" },
+                      { label: "Domains",            free: "2",         growth: "15",        ent: "Unlimited" },
+                      { label: "Data retention",     free: "7 days",    growth: "30 days",   ent: "90 days" },
                       { label: "Webhooks",           free: "1",         growth: "10",        ent: "Unlimited" },
                       { label: "Alert rules",        free: "3",         growth: "25",        ent: "Unlimited" },
                       { label: "Bot fingerprinting", free: "Basic",     growth: "Advanced",  ent: "Advanced + ML" },

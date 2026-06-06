@@ -145,7 +145,7 @@ export default function Integrations() {
     sessionId: crypto.randomUUID()
   };
   var s = document.createElement("script");
-  s.src = "https://cdn.proofofhuman.io/sdk/v2.min.js";
+  s.src = "${window.location.origin}/sdk/v2.js";
   s.async = true;
   document.head.appendChild(s);
 })();
@@ -179,26 +179,34 @@ export default function Integrations() {
     }
   };
 </script>
-<script src="https://cdn.proofofhuman.io/sdk/v2.min.js" async></script>`;
+<script src="${window.location.origin}/sdk/v2.js" async></script>`;
 
-  const jsNpmCode = `# Install via npm
-npm install @proofofhuman/sdk
+  const jsNpmCode = `<!-- Self-host the SDK by downloading it from your dashboard -->
+<!-- or load it directly from your Proof of Human deployment: -->
+<script src="${window.location.origin}/sdk/v2.js" async></script>
 
-# or yarn
-yarn add @proofofhuman/sdk`;
+# The SDK is a zero-dependency vanilla JS file.
+# Copy /sdk/v2.js to your own CDN or serve it directly.`;
 
-  const jsNpmUsageCode = `import { PoHClient } from '@proofofhuman/sdk';
+  const jsNpmUsageCode = `// Using the SDK with an onVerdict callback:
+<script>
+  window.PoH = {
+    token: "${primaryToken}",
+    sessionId: crypto.randomUUID(),
+    onVerdict: function(result) {
+      // result = { score: 0.92, verdict: "HUMAN", flags: [], sessionId: "..." }
+      if (result.verdict === 'BOT') {
+        document.getElementById('form').style.display = 'none';
+      }
+    }
+  };
+</script>
+<script src="${window.location.origin}/sdk/v2.js" async></script>
 
-const poh = new PoHClient({
-  token: process.env.POH_TOKEN,
-  sessionId: crypto.randomUUID(),
-  autoSend: true,
-  onVerdict: ({ score, verdict }) => {
-    if (verdict === 'BOT') blockUser();
-  }
-});
-
-await poh.track('form_submit', { formId: 'checkout' });`;
+// Or listen for the DOM event on any element:
+document.addEventListener('poh:verdict', function(e) {
+  console.log('verdict:', e.detail.verdict, 'score:', e.detail.score);
+});`;
 
   const apiIngestCode = `curl -X POST ${window.location.origin}/api/ingest \\
   -H "Authorization: Bearer ${primaryToken}" \\
@@ -510,8 +518,8 @@ wp option update poh_mode "passive"`;
             <div className="flex items-start gap-4 bg-card border border-border p-5 rounded-xl shadow-sm">
               <div className="p-3 bg-yellow-400/10 rounded-lg shrink-0"><Code className="w-8 h-8 text-yellow-400" /></div>
               <div>
-                <h2 className="text-xl font-semibold">Direct JavaScript / npm SDK</h2>
-                <p className="text-sm text-muted-foreground mt-1">Full control. Load via CDN for any site, or install via npm for React, Vue, Next.js, and Node.js apps.</p>
+                <h2 className="text-xl font-semibold">Direct JavaScript Integration</h2>
+                <p className="text-sm text-muted-foreground mt-1">Full control. Drop one script tag into any site. The SDK is a zero-dependency vanilla JS file — no build step, no framework required.</p>
               </div>
             </div>
             <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-5">
@@ -534,8 +542,8 @@ wp option update poh_mode "passive"`;
               </div>
             </div>
             <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-5">
-              <h3 className="font-semibold text-lg">Option B — npm / yarn</h3>
-              <CodeBlock code={jsNpmCode} language="bash" />
+              <h3 className="font-semibold text-lg">Option B — Self-host the SDK file</h3>
+              <CodeBlock code={jsNpmCode} language="html" />
               <div className="relative">
                 <CodeBlock code={jsNpmUsageCode} language="javascript" />
                 <button onClick={() => handleCopy(jsNpmUsageCode, "js-npm")} className="absolute top-2 right-2 p-1.5 bg-secondary/80 border border-border rounded hover:bg-secondary text-muted-foreground">

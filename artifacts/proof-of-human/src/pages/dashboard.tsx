@@ -25,12 +25,15 @@ type StatsData = {
 
 type ScoreDistBucket = { bucket: string; count: number };
 
+type SystemStatus = "online" | "degraded" | "offline" | "checking";
+
 export default function Dashboard() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [scoreDist, setScoreDist] = useState<ScoreDistBucket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [systemStatus, setSystemStatus] = useState<SystemStatus>("checking");
 
   const fetchStats = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -50,10 +53,26 @@ export default function Dashboard() {
     }
   };
 
+  const checkHealth = async () => {
+    try {
+      const res = await fetch("/api/health", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSystemStatus(data.db === false ? "degraded" : "online");
+      } else {
+        setSystemStatus("degraded");
+      }
+    } catch {
+      setSystemStatus("offline");
+    }
+  };
+
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(() => fetchStats(true), 30000);
-    return () => clearInterval(interval);
+    checkHealth();
+    const statsInterval = setInterval(() => fetchStats(true), 30000);
+    const healthInterval = setInterval(checkHealth, 60000);
+    return () => { clearInterval(statsInterval); clearInterval(healthInterval); };
   }, []);
 
   const hasData = stats && stats.totalEvents > 0;
@@ -103,10 +122,30 @@ export default function Dashboard() {
               <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
               Refresh
             </button>
-            <div className="flex items-center gap-2 text-sm text-green-500 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              System Online
-            </div>
+            {systemStatus === "checking" && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full border border-border">
+                <div className="w-2 h-2 rounded-full bg-muted-foreground animate-pulse"></div>
+                Checking…
+              </div>
+            )}
+            {systemStatus === "online" && (
+              <div className="flex items-center gap-2 text-sm text-green-500 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                System Online
+              </div>
+            )}
+            {systemStatus === "degraded" && (
+              <div className="flex items-center gap-2 text-sm text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-full border border-yellow-500/20">
+                <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
+                Degraded
+              </div>
+            )}
+            {systemStatus === "offline" && (
+              <div className="flex items-center gap-2 text-sm text-red-500 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                API Offline
+              </div>
+            )}
           </div>
         </div>
 

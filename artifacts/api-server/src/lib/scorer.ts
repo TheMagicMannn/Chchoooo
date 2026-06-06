@@ -42,15 +42,38 @@ export interface SdkSignals {
   hardwareConcurrency: number;    // navigator.hardwareConcurrency
   deviceMemory:        number;    // navigator.deviceMemory, -1 if unsupported
   colorDepth:          number;    // screen.colorDepth
+  devicePixelRatio?:   number;    // window.devicePixelRatio
   hasTouchSupport:     boolean;
   maxTouchPoints:      number;
   cookieEnabled:       boolean;
 
-  // ── Fingerprints ─────────────────────────────────────────────────────────────
+  // ── Canvas fingerprint ────────────────────────────────────────────────────────
+  canvasHash:          number;    // pixel-data FNV hash of canvas fingerprint draw
+  canvasBlank?:        boolean;   // true if canvas rendered completely blank
+  audioHash?:          number;    // OfflineAudioContext output hash
+
+  // ── Font enumeration ─────────────────────────────────────────────────────────
+  fontCount?:          number;    // number of installed fonts detected (0 = headless)
+  fontHash?:           number;    // FNV-1a hash of detected font list
+
+  // ── WebGL fingerprint ─────────────────────────────────────────────────────────
   webglVendor:         string;    // e.g. "Google Inc. (Intel)"
   webglRenderer:       string;    // e.g. "ANGLE (Intel...)" vs "SwiftShader"
-  canvasHash:          number;    // pixel-data hash of canvas fingerprint draw
-  audioHash:           number;    // OfflineAudioContext output hash
+  webglMaxTextureSize?: number;   // MAX_TEXTURE_SIZE — differs between real/virtual GPUs
+  webglExtensions?:    number;    // count of supported WebGL extensions
+
+  // ── Hardware / battery / network signals (v2 SDK) ────────────────────────────
+  batteryCharging?:    boolean | null;  // null = API unavailable
+  batteryLevel?:       number | null;   // 0–100, null = unavailable
+  mediaAudioInputs?:   number;   // -1 = not enumerated; 0 = none (headless signal)
+  mediaVideoInputs?:   number;
+  connectionEffectiveType?: string;     // "4g" | "3g" | "2g" | "slow-2g"
+  permNotification?:   string;   // "granted" | "denied" | "prompt"
+  permCamera?:         string;
+  permMicrophone?:     string;
+  storageQuotaMb?:     number;
+
+  // ── Misc ─────────────────────────────────────────────────────────────────────
   timezone:            string;    // Intl timezone string
 }
 
@@ -166,28 +189,58 @@ function scoreSdkSignals(signals: Partial<SdkSignals>): { score: number; flags: 
   if (signals.hasLanguages === false)               flags.push('no_languages');
   if (signals.cookieEnabled === false)              flags.push('cookies_disabled');
 
-  // Canvas fingerprint absent (all real browsers produce a non-zero hash)
+  // Canvas fingerprint absent or blank
   if (signals.canvasHash !== undefined && signals.canvasHash === 0)
     flags.push('canvas_fingerprint_absent');
+  if (signals.canvasBlank === true)
+    flags.push('canvas_blank');
+
+  // Font enumeration — headless/minimal browsers have very few installed fonts
+  if (signals.fontCount !== undefined && signals.fontCount < 3)
+    flags.push('low_font_count');
+
+  // WebGL capability anomalies — virtual GPUs have abnormally low limits
+  if (signals.webglMaxTextureSize !== undefined && signals.webglMaxTextureSize > 0 && signals.webglMaxTextureSize < 4096)
+    flags.push('low_webgl_texture_size');
+
+  // Battery — VM environments always report 100% charging
+  if (signals.batteryCharging === true && signals.batteryLevel === 100)
+    flags.push('vm_battery_pattern');
+
+  // No audio input devices (microphone) — real desktop browsers always enumerate at least one
+  if (signals.mediaAudioInputs !== undefined && signals.mediaAudioInputs !== -1 &&
+      signals.mediaAudioInputs === 0 && !signals.isMobile)
+    flags.push('no_audio_devices');
+
+  // Permissions denied before user has had a chance to interact (automation pattern)
+  if (signals.permNotification === 'denied' && signals.permCamera === 'denied' &&
+      signals.permMicrophone === 'denied' && (signals.interactionCount ?? 0) === 0)
+    flags.push('all_permissions_pre_denied');
 
   // ── Apply penalties to composite ─────────────────────────────────────────────
 
   if (signals.composite !== undefined) {
     let adj = signals.composite;
 
-    if (flags.includes('fingerprint_failure'))        adj -= 0.30;
-    if (flags.includes('zero_interaction'))            adj -= 0.20;
-    if (flags.includes('no_clicks'))                   adj -= 0.10;
-    if (flags.includes('instant_interaction'))         adj -= 0.25;
-    if (flags.includes('robotic_timing'))              adj -= 0.20;
-    if (flags.includes('zero_outer_dimensions'))       adj -= 0.15;
-    if (flags.includes('low_color_depth'))             adj -= 0.10;
-    if (flags.includes('no_plugins_desktop'))          adj -= 0.10;
-    if (flags.includes('low_hardware_concurrency'))    adj -= 0.15;
-    if (flags.includes('low_device_memory'))           adj -= 0.10;
-    if (flags.includes('no_languages'))                adj -= 0.10;
-    if (flags.includes('cookies_disabled'))            adj -= 0.10;
-    if (flags.includes('canvas_fingerprint_absent'))   adj -= 0.12;
+    if (flags.includes('fingerprint_failure'))           adj -= 0.30;
+    if (flags.includes('zero_interaction'))              adj -= 0.20;
+    if (flags.includes('no_clicks'))                     adj -= 0.10;
+    if (flags.includes('instant_interaction'))           adj -= 0.25;
+    if (flags.includes('robotic_timing'))                adj -= 0.20;
+    if (flags.includes('zero_outer_dimensions'))         adj -= 0.15;
+    if (flags.includes('low_color_depth'))               adj -= 0.10;
+    if (flags.includes('no_plugins_desktop'))            adj -= 0.10;
+    if (flags.includes('low_hardware_concurrency'))      adj -= 0.15;
+    if (flags.includes('low_device_memory'))             adj -= 0.10;
+    if (flags.includes('no_languages'))                  adj -= 0.10;
+    if (flags.includes('cookies_disabled'))              adj -= 0.10;
+    if (flags.includes('canvas_fingerprint_absent'))     adj -= 0.12;
+    if (flags.includes('canvas_blank'))                  adj -= 0.12;
+    if (flags.includes('low_font_count'))                adj -= 0.15;
+    if (flags.includes('low_webgl_texture_size'))        adj -= 0.08;
+    if (flags.includes('vm_battery_pattern'))            adj -= 0.08;
+    if (flags.includes('no_audio_devices'))              adj -= 0.10;
+    if (flags.includes('all_permissions_pre_denied'))    adj -= 0.12;
 
     return { score: clamp(adj), flags };
   }
@@ -281,6 +334,12 @@ export function computeScore(params: {
     factors.clickCount          = s.clickCount          ?? 0;
     factors.interactionCount    = s.interactionCount    ?? 0;
     factors.sessionDurationMs   = s.sessionDurationMs   ?? 0;
+    factors.fontCount           = s.fontCount           ?? -1;
+    factors.canvasBlank         = s.canvasBlank         ? 1 : 0;
+    factors.webglMaxTextureSize = s.webglMaxTextureSize ?? 0;
+    factors.webglExtensions     = s.webglExtensions     ?? 0;
+    factors.batteryLevel        = s.batteryLevel        ?? -1;
+    factors.mediaAudioInputs    = s.mediaAudioInputs    ?? -1;
     factors.sdkAdjusted         = score;
   }
 

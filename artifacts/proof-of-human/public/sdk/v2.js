@@ -519,7 +519,22 @@
 
   // ── Beacon sender ─────────────────────────────────────────────────────────────
 
-  function sendBeacon() {
+  function dispatchVerdict(result) {
+    try {
+      d.dispatchEvent(new CustomEvent('poh:verdict', {
+        bubbles: true,
+        detail: {
+          sessionId: sessionId,
+          score:     result.score,
+          verdict:   result.verdict,
+          flags:     result.flags || [],
+          eventType: 'page_view',
+        },
+      }));
+    } catch (e) {}
+  }
+
+  function sendBeacon(keepalive) {
     if (sent) return;
     sent = true;
 
@@ -538,15 +553,20 @@
         method:    'POST',
         headers:   { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
         body:      payload,
-        keepalive: true,
-      });
+        keepalive: !!keepalive,
+      }).then(function (res) {
+        if (res.ok) return res.json();
+      }).then(function (data) {
+        if (data) dispatchVerdict(data);
+        if (data && typeof cfg.onVerdict === 'function') cfg.onVerdict(data);
+      }).catch(function () {});
     } catch (e) {}
   }
 
   // Defer 6 s to let async signals (battery, permissions, media) populate
-  setTimeout(sendBeacon, 6000);
-  w.addEventListener('pagehide',     sendBeacon);
-  w.addEventListener('beforeunload', sendBeacon);
+  setTimeout(function () { sendBeacon(false); }, 6000);
+  w.addEventListener('pagehide',     function () { sendBeacon(true); });
+  w.addEventListener('beforeunload', function () { sendBeacon(true); });
 
   // ── Public API ────────────────────────────────────────────────────────────────
 
