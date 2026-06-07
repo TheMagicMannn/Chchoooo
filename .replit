@@ -31,7 +31,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=8080 NODE_ENV=development pnpm --filter @workspace/api-server run dev & VITE_CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY PORT=5000 BASE_PATH=/ pnpm --filter @workspace/proof-of-human run dev"
+args = "VITE_CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY PORT=5000 BASE_PATH=/ pnpm --filter @workspace/proof-of-human run dev"
 waitForPort = 5000
 
 [agent]
@@ -50,10 +50,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 8080
-externalPort = 8080
-
-[[ports]]
 localPort = 8081
 externalPort = 8081
 
@@ -64,3 +60,8 @@ externalPort = 3002
 [[ports]]
 localPort = 25723
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+PORT = "8080"
