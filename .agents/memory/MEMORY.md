@@ -5,3 +5,4 @@
 - [Drizzle date_trunc parameterization](drizzle-date-trunc.md) — PostgreSQL date_trunc requires a string literal first arg; use sql.raw("'hour'") not ${truncUnit} inside sql template or PG rejects the query.
 - [Express 5 wildcard routes](express5-wildcards.md) — bare `"*"` in app.get/post throws PathError at startup in Express 5 (path-to-regexp v8); use app.use() with no path for catch-all SPA fallback.
 - [Replit deployment NODE_ENV](replit-deployment-node-env.md) — Replit deployments do NOT set NODE_ENV automatically; never gate critical middleware on NODE_ENV=production or it silently becomes a no-op.
+- [Clerk proxy with dev keys](clerk-proxy-dev-keys.md) — Clerk proxyUrl only works with pk_live_ keys; dev instances return host_invalid; gate proxyUrl on key type at build time.

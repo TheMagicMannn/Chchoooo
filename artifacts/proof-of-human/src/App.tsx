@@ -190,10 +190,14 @@ function Router() {
   );
 }
 
-// In production the API server proxies Clerk's Frontend API through /api/__clerk
-// so auth works on .replit.app and custom domains without CNAME DNS setup.
-const clerkProxyUrl = import.meta.env.PROD
-  ? `${window.location.origin}/api/__clerk`
+// Clerk proxy: only valid for production Clerk instances (pk_live_...).
+// Dev instances (pk_test_...) reject proxy requests with "host_invalid" — Clerk's
+// proxy feature is not available for development keys regardless of configuration.
+// When switching to production keys, also register the proxy URL in the Clerk
+// dashboard → Domains → Proxy URL, then set VITE_CLERK_PROXY_URL in the
+// .replit build command to https://your-domain.replit.app/api/__clerk.
+const clerkProxyUrl = clerkPubKey.startsWith("pk_live_")
+  ? (import.meta.env.VITE_CLERK_PROXY_URL || undefined)
   : undefined;
 
 function ClerkProviderWithRoutes() {
