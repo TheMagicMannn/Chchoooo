@@ -165,7 +165,8 @@ if (process.env.NODE_ENV === "production") {
   if (existsSync(distPath)) {
     app.use(express.static(distPath));
     // SPA fallback — any non-API path returns index.html so client-side routing works.
-    app.get("*", (_req, res) => {
+    // app.use() (no path) avoids path-to-regexp, which rejects bare "*" in Express 5.
+    app.use((_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   } else {
