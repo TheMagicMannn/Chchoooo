@@ -16,6 +16,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Proof of Human analytics SDK (page view tracking) -->
+    <script>
+      window.PoH = {
+        token: "14f2e082-9e98-47e1-b848-cd258e90ac3a",
+        sessionId: crypto.randomUUID(),
+        onVerdict: function (result) {
+          console.log("PoH verdict:", result.verdict, result.score);
+        }
+      };
+    </script>
+    <script src="https://chchoooo--innovativenetwe.replit.app/sdk/v2.js" async></script>
   </head>
   <body>
     <div id="root"></div>

@@ -10,6 +10,27 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- Optional env: `POH_TOKEN`, `POH_INGEST_URL` — Proof of Human analytics SDK (server-side event tracking; see "Analytics SDK" below)
+
+## Analytics SDK (Proof of Human)
+
+The marketing/dashboard frontend (`artifacts/proof-of-human`) automatically tracks page views via the hosted PoH SDK script embedded in `index.html` (token: `14f2e082-9e98-47e1-b848-cd258e90ac3a`).
+
+For server-side custom events (form_submit, login, checkout) from the API server, use the helper:
+
+```ts
+import { pohTrack } from "./lib/pohTracker";
+
+await pohTrack({
+  sessionId: req.body.session_id,
+  eventType: "login",
+  domain: "example.com",
+});
+```
+
+Required env vars for the helper:
+- `POH_TOKEN=14f2e082-9e98-47e1-b848-cd258e90ac3a`
+- `POH_INGEST_URL=https://chchoooo--innovativenetwe.replit.app/api/ingest`
 
 ## Stack
 
