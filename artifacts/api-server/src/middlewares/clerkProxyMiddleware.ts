@@ -72,7 +72,9 @@ export function getClerkProxyHost(req: {
  * Must be mounted BEFORE clerkProxyMiddleware.
  */
 export function clerkNpmProxyMiddleware(): RequestHandler {
-  if (process.env.NODE_ENV !== "production") {
+  // Active whenever the Clerk keys are present — NOT gated on NODE_ENV because
+  // Replit deployments don't set NODE_ENV automatically.
+  if (!process.env.CLERK_PUBLISHABLE_KEY) {
     return (_req, _res, next) => next();
   }
 
@@ -90,10 +92,8 @@ export function clerkNpmProxyMiddleware(): RequestHandler {
  * Must be mounted AFTER clerkNpmProxyMiddleware.
  */
 export function clerkProxyMiddleware(): RequestHandler {
-  if (process.env.NODE_ENV !== "production") {
-    return (_req, _res, next) => next();
-  }
-
+  // Active whenever the Clerk keys are present — NOT gated on NODE_ENV because
+  // Replit deployments don't set NODE_ENV automatically.
   const secretKey = process.env.CLERK_SECRET_KEY;
   if (!secretKey) {
     return (_req, _res, next) => next();

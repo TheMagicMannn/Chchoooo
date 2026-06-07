@@ -155,9 +155,11 @@ app.use(clerkMiddleware());
 
 app.use("/api", router);
 
-// Production: serve the compiled React app and handle SPA deep-links.
-// In development the Vite dev server owns port 5000 and proxies /api to us.
-if (process.env.NODE_ENV === "production") {
+// Serve the compiled React app and handle SPA deep-links when the dist is present.
+// Not gated on NODE_ENV — Replit deployments don't set it automatically.
+// In development the Vite dev server proxies /api to us so Express never
+// receives non-API requests, making these routes effectively unreachable.
+{
   const distPath = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     "../../proof-of-human/dist/public",
@@ -169,8 +171,6 @@ if (process.env.NODE_ENV === "production") {
     app.use((_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
-  } else {
-    logger.warn({ distPath }, "Frontend dist not found — run the frontend build before deploying");
   }
 }
 
