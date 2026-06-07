@@ -22,7 +22,7 @@ import { logger } from "../lib/logger";
 
 const router = Router();
 
-router.post("/clerk", async (req, res) => {
+router.post("/", async (req, res) => {
   const secret = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!secret) {

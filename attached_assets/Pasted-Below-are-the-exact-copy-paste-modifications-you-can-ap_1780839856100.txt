@@ -1,0 +1,220 @@
+Below are the exact copy/paste modifications you can apply to your existing codebase without rewriting the entire application.
+
+⸻
+
+1. src/routes/clerk_webhook.ts
+
+Find
+
+router.post("/clerk", async (req, res) => {
+
+Replace With
+
+router.post("/", async (req, res) => {
+
+⸻
+
+2. src/app.ts
+
+Add Import
+
+Find:
+
+import { logger } from "./lib/logger";
+
+Add below it:
+
+import {
+  CLERK_PROXY_PATH,
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware,
+  clerkProxyMiddleware,
+} from "./middlewares/clerkProxyMiddleware";
+
+⸻
+
+Enable Replit Reverse Proxy Support
+
+Find:
+
+const app: Express = express();
+
+Replace with:
+
+const app: Express = express();
+app.set("trust proxy", 1);
+
+⸻
+
+Mount Clerk Proxy Middleware
+
+Immediately after:
+
+app.set("trust proxy", 1);
+
+Add:
+
+app.use(
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware(),
+);
+app.use(
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware(),
+);
+
+Result:
+
+const app: Express = express();
+app.set("trust proxy", 1);
+app.use(
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware(),
+);
+app.use(
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware(),
+);
+
+⸻
+
+3. Harden CORS
+
+Find
+
+if (
+  allowedOrigins.length === 0 ||
+  allowedOrigins.some(
+    (allowed) =>
+      origin === allowed ||
+      origin.endsWith(`.${allowed}`)
+  )
+) {
+  callback(null, true);
+} else {
+  callback(new Error("Not allowed by CORS"));
+}
+
+Replace With
+
+if (process.env.NODE_ENV === "production") {
+  if (allowedOrigins.length === 0) {
+    callback(
+      new Error(
+        "ALLOWED_ORIGINS must be configured in production"
+      )
+    );
+    return;
+  }
+}
+if (
+  allowedOrigins.some(
+    (allowed) =>
+      origin === allowed ||
+      origin.endsWith(`.${allowed}`)
+  )
+) {
+  callback(null, true);
+} else {
+  callback(
+    new Error("CORS: origin not allowed")
+  );
+}
+
+⸻
+
+4. src/middlewares/clerkProxyMiddleware.ts
+
+Find
+
+proxyReq.setHeader(
+  "Clerk-Proxy-Url",
+  proxyUrl,
+);
+
+Replace With
+
+proxyReq.setHeader(
+  "Clerk-Proxy-Url",
+  proxyUrl,
+);
+proxyReq.setHeader(
+  "X-Forwarded-Proto",
+  protocol,
+);
+proxyReq.setHeader(
+  "X-Forwarded-Host",
+  host,
+);
+
+⸻
+
+5. Validate APP_BASE_URL
+
+Search Entire Project
+
+Search:
+
+process.env.APP_BASE_URL ||
+"http://localhost:3000"
+
+Replace with:
+
+const APP_BASE_URL =
+  process.env.APP_BASE_URL;
+if (!APP_BASE_URL) {
+  throw new Error(
+    "APP_BASE_URL is required in production"
+  );
+}
+
+⸻
+
+6. Production Environment Variables
+
+Add these to Replit Secrets:
+
+NODE_ENV=production
+APP_BASE_URL=https://api.yourdomain.com
+ALLOWED_ORIGINS=https://app.yourdomain.com,https://yourdomain.com
+CLERK_SECRET_KEY=YOUR_CLERK_SECRET
+CLERK_PUBLISHABLE_KEY=YOUR_CLERK_PUBLISHABLE
+CLERK_WEBHOOK_SECRET=YOUR_CLERK_WEBHOOK_SECRET
+STRIPE_SECRET_KEY=YOUR_STRIPE_SECRET
+STRIPE_WEBHOOK_SECRET=YOUR_STRIPE_WEBHOOK_SECRET
+DATABASE_URL=YOUR_DATABASE_URL
+
+⸻
+
+7. Verify Final Routes
+
+After deployment these should resolve correctly:
+
+POST /api/webhooks/clerk
+POST /api/stripe/webhook
+POST /api/ingest
+
+And Clerk proxy routes:
+
+/api/__clerk/*
+/api/__clerk/npm/*
+
+⸻
+
+8. Recommended Additional Production Middleware
+
+In app.ts, install:
+
+npm install helmet compression
+
+Add:
+
+import helmet from "helmet";
+import compression from "compression";
+
+Then near the top of middleware registration:
+
+app.use(helmet());
+app.use(compression());
+
+These changes address the webhook path bug, activate Clerk proxying for Replit, ensure proper reverse-proxy handling, tighten CORS, and prevent localhost fallback issues in production.

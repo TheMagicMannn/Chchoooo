@@ -1,5 +1,7 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import router from "./routes";
@@ -7,8 +9,26 @@ import healthRouter from "./routes/health";
 import clerkWebhookRouter from "./routes/clerk_webhook";
 import { WebhookHandlers } from "./webhookHandlers";
 import { logger } from "./lib/logger";
+import {
+  CLERK_PROXY_PATH,
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware,
+  clerkProxyMiddleware,
+} from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
+app.set("trust proxy", 1);
+app.use(
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware(),
+);
+app.use(
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware(),
+);
+
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(compression());
 
 app.use(
   pinoHttp({
@@ -72,8 +92,13 @@ app.use(
         callback(null, true);
         return;
       }
+      if (process.env.NODE_ENV === "production") {
+        if (allowedOrigins.length === 0) {
+          callback(new Error("ALLOWED_ORIGINS must be configured in production"));
+          return;
+        }
+      }
       if (
-        allowedOrigins.length === 0 ||
         allowedOrigins.some((allowed) => origin === allowed || origin.endsWith(`.${allowed}`))
       ) {
         callback(null, true);
