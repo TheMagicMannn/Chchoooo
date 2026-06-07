@@ -102,8 +102,19 @@ app.use(
         callback(null, true);
         return;
       }
+      // REPLIT_DOMAINS contains bare hostnames (e.g. "foo.replit.app") but
+      // the Origin header includes the protocol ("https://foo.replit.app"),
+      // so we extract the hostname before comparing.
+      let originHost: string;
+      try {
+        originHost = new URL(origin).hostname;
+      } catch {
+        originHost = origin;
+      }
       if (
-        allowedOrigins.some((allowed) => origin === allowed || origin.endsWith(`.${allowed}`))
+        allowedOrigins.some(
+          (allowed) => originHost === allowed || originHost.endsWith(`.${allowed}`),
+        )
       ) {
         callback(null, true);
       } else {
