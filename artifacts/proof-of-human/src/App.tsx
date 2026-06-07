@@ -190,12 +190,19 @@ function Router() {
   );
 }
 
+// In production the API server proxies Clerk's Frontend API through /api/__clerk
+// so auth works on .replit.app and custom domains without CNAME DNS setup.
+const clerkProxyUrl = import.meta.env.PROD
+  ? `${window.location.origin}/api/__clerk`
+  : undefined;
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
+      proxyUrl={clerkProxyUrl}
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}

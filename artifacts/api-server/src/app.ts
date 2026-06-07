@@ -4,6 +4,9 @@ import helmet from "helmet";
 import compression from "compression";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
+import path from "path";
+import { fileURLToPath } from "url";
+import { existsSync } from "fs";
 import router from "./routes";
 import healthRouter from "./routes/health";
 import clerkWebhookRouter from "./routes/clerk_webhook";
@@ -90,39 +93,46 @@ const allowedOrigins: string[] = (() => {
   return [];
 })();
 
-app.use(
-  cors({
-    credentials: true,
-    origin: (origin, callback) => {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-      if (allowedOrigins.length === 0) {
-        callback(null, true);
-        return;
-      }
-      // REPLIT_DOMAINS contains bare hostnames (e.g. "foo.replit.app") but
-      // the Origin header includes the protocol ("https://foo.replit.app"),
-      // so we extract the hostname before comparing.
-      let originHost: string;
-      try {
-        originHost = new URL(origin).hostname;
-      } catch {
-        originHost = origin;
-      }
-      if (
-        allowedOrigins.some(
-          (allowed) => originHost === allowed || originHost.endsWith(`.${allowed}`),
-        )
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS: origin not allowed"));
-      }
-    },
-  }),
-);
+// /api/ingest is called cross-origin from customer websites — allow any origin.
+// Bearer-token auth means cookies/credentials are not needed here.
+app.use("/api/ingest", cors({ origin: "*", credentials: false }));
+
+const dashboardCors = cors({
+  credentials: true,
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (allowedOrigins.length === 0) {
+      callback(null, true);
+      return;
+    }
+    // REPLIT_DOMAINS contains bare hostnames (e.g. "foo.replit.app") but
+    // the Origin header includes the protocol ("https://foo.replit.app"),
+    // so we extract the hostname before comparing.
+    let originHost: string;
+    try {
+      originHost = new URL(origin).hostname;
+    } catch {
+      originHost = origin;
+    }
+    if (
+      allowedOrigins.some(
+        (allowed) => originHost === allowed || originHost.endsWith(`.${allowed}`),
+      )
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS: origin not allowed"));
+    }
+  },
+});
+app.use((req, res, next) => {
+  // Ingest already has its own CORS headers set above — skip to avoid overwrite.
+  if (req.path.startsWith("/api/ingest")) return next();
+  return dashboardCors(req, res, next);
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -144,5 +154,23 @@ app.get("/api/stripe/prices", async (_req, res) => {
 app.use(clerkMiddleware());
 
 app.use("/api", router);
+
+// Production: serve the compiled React app and handle SPA deep-links.
+// In development the Vite dev server owns port 5000 and proxies /api to us.
+if (process.env.NODE_ENV === "production") {
+  const distPath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../proof-of-human/dist/public",
+  );
+  if (existsSync(distPath)) {
+    app.use(express.static(distPath));
+    // SPA fallback — any non-API path returns index.html so client-side routing works.
+    app.get("*", (_req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  } else {
+    logger.warn({ distPath }, "Frontend dist not found — run the frontend build before deploying");
+  }
+}
 
 export default app;
