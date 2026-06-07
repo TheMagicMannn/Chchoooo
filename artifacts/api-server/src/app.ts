@@ -80,9 +80,15 @@ app.post(
   clerkWebhookRouter,
 );
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : [];
+const allowedOrigins: string[] = (() => {
+  if (process.env.ALLOWED_ORIGINS) {
+    return process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim());
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    return process.env.REPLIT_DOMAINS.split(",").map((o) => o.trim());
+  }
+  return [];
+})();
 
 app.use(
   cors({
@@ -92,11 +98,9 @@ app.use(
         callback(null, true);
         return;
       }
-      if (process.env.NODE_ENV === "production") {
-        if (allowedOrigins.length === 0) {
-          callback(new Error("ALLOWED_ORIGINS must be configured in production"));
-          return;
-        }
+      if (allowedOrigins.length === 0) {
+        callback(null, true);
+        return;
       }
       if (
         allowedOrigins.some((allowed) => origin === allowed || origin.endsWith(`.${allowed}`))
