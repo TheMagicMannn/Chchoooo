@@ -80,7 +80,7 @@ export default function Connect() {
       setChartData(hourly.map((p: any) => ({ ...p, t: formatBucket(p.t, r) })));
       setGeoData(geo);
       setSessions(recent);
-      setDomains(['All Domains', ...domainList.map((d: any) => d.domain)]);
+      setDomains(['All Domains', ...(domainList.domains ?? []).map((d: any) => d.domain)]);
     } catch (e: any) {
       setError(e.message || 'Failed to load analytics');
     } finally {

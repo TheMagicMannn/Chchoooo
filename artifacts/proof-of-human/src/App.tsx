@@ -116,7 +116,8 @@ function HomeRedirect() {
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     api.domains.list()
-      .then((domains: any[]) => {
+      .then((data: any) => {
+        const domains = data?.domains ?? data ?? [];
         setLocation(domains.length === 0 ? "/onboarding" : "/connect", { replace: true });
       })
       .catch(() => setLocation("/onboarding", { replace: true }));
