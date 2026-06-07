@@ -68,3 +68,6 @@ externalPort = 3000
 [userenv]
 
 [userenv.shared]
+NODE_ENV = "PRODUCTION "
+APP_BASE_URL = "https://chchoooo--kwitter1982.replit.app"
+VITE_CLERK_PROXY_URL = "https://chchoooo--kwitter1982.replit.app"
