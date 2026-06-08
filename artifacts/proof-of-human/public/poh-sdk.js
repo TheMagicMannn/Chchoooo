@@ -471,19 +471,48 @@
   // ── Scheduling ───────────────────────────────────────────────────────────────
 
 
-      // Safari/WebKit fallback
-      W.setTimeout(function() {
+      // ── Scheduling ────────────────────────────────────────────────────────────────
+
+  console.log('[PoH] SDK loaded');
+
+  var earlyFired = false;
+
+  var earlyTimer = W.setTimeout(function () {
+
+    console.log('[PoH] early timer fired');
+
+    earlyFired = true;
+
+    try {
+
+      audioHash(function (h) {
+
+        console.log('[PoH] audio hash complete', h);
+
+        ENV.audioHash = h;
+
         try {
-          send(buildSignals(), false);
-        } catch (err) {}
-      }, 1500);
+
+          var signals = buildSignals();
+
+          console.log('[PoH] built signals', signals);
+
+          send(signals, false);
+
+          console.log('[PoH] send called');
+
+        } catch (err) {
+
+          console.error('[PoH] build/send error', err);
+
+        }
+
+      });
 
     } catch (err) {
-      console.error('[PoH] audioHash failed', err);
 
-      try {
-        send(buildSignals(), false);
-      } catch (e) {}
+      console.error('[PoH] audioHash error', err);
+
     }
 
   }, 5000);
@@ -491,36 +520,45 @@
   // Final send on page hide/unload
 
   function onHide() {
+
+    console.log('[PoH] page hide');
+
     if (!earlyFired) {
+
       W.clearTimeout(earlyTimer);
+
     }
 
     try {
-      audioHash(function(h) {
+
+      audioHash(function (h) {
+
         ENV.audioHash = h;
 
         try {
+
           send(buildSignals(), true);
-        } catch (err) {}
+
+          console.log('[PoH] final send called');
+
+        } catch (err) {
+
+          console.error('[PoH] final send error', err);
+
+        }
+
       });
 
-      W.setTimeout(function() {
-        try {
-          send(buildSignals(), true);
-        } catch (err) {}
-      }, 1000);
-
     } catch (err) {
-      try {
-        send(buildSignals(), true);
-      } catch (e) {}
+
+      console.error('[PoH] onHide audio error', err);
+
     }
+
   }
 
   document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'hidden') {
-      onHide();
-    }
+    if (document.visibilityState === 'hidden') onHide();
   });
 
   W.addEventListener('pagehide', onHide, { once: true });
