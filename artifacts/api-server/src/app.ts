@@ -13,10 +13,9 @@ import clerkWebhookRouter from "./routes/clerk_webhook";
 import { WebhookHandlers } from "./webhookHandlers";
 import { logger } from "./lib/logger";
 import {
-  CLERK_PROXY_PATH,
-  CLERK_NPM_PROXY_PATH,
-  clerkNpmProxyMiddleware,
-  clerkProxyMiddleware,
+ // CLERK_PROXY_PATH,
+  //CLERK_NPM_PROXY_PATH,
+  //clerkNpmProxyMiddleware,clerkProxyMiddleware,
 } from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
