@@ -71,3 +71,4 @@ externalPort = 3000
 NODE_ENV = "PRODUCTION "
 APP_BASE_URL = "https://chchoooo--kwitter1982.replit.app"
 VITE_CLERK_PROXY_URL = "https://chchoooo--kwitter1982.replit.app"
+NEON_DATABASE_URL = "postgresql://neondb_owner:npg_e3Zc0Uhosiyl@ep-wandering-cherry-aph9zdoo.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require"
