@@ -472,48 +472,21 @@
 
 
       // ── Scheduling ────────────────────────────────────────────────────────────────
-
-  console.log('[PoH] SDK loaded');
+  // ── Scheduling ────────────────────────────────────────────────────────────────
 
   var earlyFired = false;
 
-  var earlyTimer = W.setTimeout(function () {
-
-    console.log('[PoH] early timer fired');
+  var earlyTimer = W.setTimeout(function() {
 
     earlyFired = true;
 
-    try {
+    audioHash(function(h) {
 
-      audioHash(function (h) {
+      ENV.audioHash = h;
 
-        console.log('[PoH] audio hash complete', h);
+      send(buildSignals(), false);
 
-        ENV.audioHash = h;
-
-        try {
-
-          var signals = buildSignals();
-
-          console.log('[PoH] built signals', signals);
-
-          send(signals, false);
-
-          console.log('[PoH] send called');
-
-        } catch (err) {
-
-          console.error('[PoH] build/send error', err);
-
-        }
-
-      });
-
-    } catch (err) {
-
-      console.error('[PoH] audioHash error', err);
-
-    }
+    });
 
   }, 5000);
 
@@ -521,39 +494,15 @@
 
   function onHide() {
 
-    console.log('[PoH] page hide');
+    if (!earlyFired) W.clearTimeout(earlyTimer);
 
-    if (!earlyFired) {
+    audioHash(function(h) {
 
-      W.clearTimeout(earlyTimer);
+      ENV.audioHash = h;
 
-    }
+      send(buildSignals(), true);
 
-    try {
-
-      audioHash(function (h) {
-
-        ENV.audioHash = h;
-
-        try {
-
-          send(buildSignals(), true);
-
-          console.log('[PoH] final send called');
-
-        } catch (err) {
-
-          console.error('[PoH] final send error', err);
-
-        }
-
-      });
-
-    } catch (err) {
-
-      console.error('[PoH] onHide audio error', err);
-
-    }
+    });
 
   }
 
