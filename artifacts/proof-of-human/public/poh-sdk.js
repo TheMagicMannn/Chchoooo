@@ -426,41 +426,7 @@
 
   // Early send at 5s (gives time for interactions + audio var earlyFired = false;
 
-var earlyFired = false;
 
-var earlyTimer = W.setTimeout(function() {
-  earlyFired = true;
-
-  try {
-    audioHash(function(h) {
-      ENV.audioHash = h;
-
-      try {
-        send(buildSignals(), false);
-      } catch (e) {
-        console.error('[PoH] send failed', e);
-      }
-    });
-
-    // Safari/WebKit fallback
-    W.setTimeout(function() {
-      try {
-        send(buildSignals(), false);
-      } catch (e) {}
-    }, 1500);
-
-  } catch (e) {
-    console.error('[PoH] audioHash failed', e);
-
-    try {
-      send(buildSignals(), false);
-    } catch (err) {}
-  }
-}, 5000);
-
-  document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'hidden') onHide();
-  });
-  W.addEventListener('pagehide', onHide, { once: true });
+    
 
 }(window));
