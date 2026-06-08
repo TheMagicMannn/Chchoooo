@@ -13,9 +13,10 @@ import clerkWebhookRouter from "./routes/clerk_webhook";
 import { WebhookHandlers } from "./webhookHandlers";
 import { logger } from "./lib/logger";
 import {
- // CLERK_PROXY_PATH,
-  //CLERK_NPM_PROXY_PATH,
-  //clerkNpmProxyMiddleware,clerkProxyMiddleware,
+  CLERK_PROXY_PATH,
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware,
+  clerkProxyMiddleware,
 } from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
@@ -152,7 +153,7 @@ app.get("/api/stripe/prices", async (_req, res) => {
 
 app.use(clerkMiddleware());
 
-//app.use("/api", router);
+app.use("/api", router);
 
 // Serve the compiled React app and handle SPA deep-links when the dist is present.
 // Not gated on NODE_ENV — Replit deployments don't set it automatically.
