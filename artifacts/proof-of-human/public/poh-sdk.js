@@ -17,7 +17,15 @@
 
   var cfg       = W.PoH || {};
   var TOKEN     = cfg.token;
-  var INGEST    = cfg.ingestUrl || (W.location.origin + '/api/ingest');
+  var INGEST    = cfg.ingestUrl || (function () {
+    var tags = W.document.querySelectorAll('script[src]');
+    for (var i = 0; i < tags.length; i++) {
+      if (/poh-sdk\.js/.test(tags[i].src)) {
+        try { return new URL(tags[i].src).origin + '/api/ingest'; } catch (e) {}
+      }
+    }
+    return W.location.origin + '/api/ingest';
+  })();
   var DOMAIN    = cfg.domain    || W.location.hostname;
   var SESSION   = cfg.sessionId || uid();
   var T0        = Date.now();

@@ -72,9 +72,16 @@
     d.cookie = '_poh_sid=' + sessionId + '; path=/; max-age=1800; SameSite=Lax';
   } catch (e) {}
 
-  var apiEndpoint = cfg.ingestUrl || (w.location.origin + '/api/ingest');
-  console.log('[PoH] API endpoint:', apiEndpoint);
-  
+  var apiEndpoint = cfg.ingestUrl || (function () {
+    var tags = w.document.querySelectorAll('script[src]');
+    for (var i = 0; i < tags.length; i++) {
+      if (/\/sdk\/v2\.js/.test(tags[i].src)) {
+        try { return new URL(tags[i].src).origin + '/api/ingest'; } catch (e) {}
+      }
+    }
+    return w.location.origin + '/api/ingest';
+  })();
+
 
   // ── Accumulators ─────────────────────────────────────────────────────────────
 
