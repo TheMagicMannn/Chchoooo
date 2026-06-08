@@ -458,47 +458,6 @@ var earlyTimer = W.setTimeout(function() {
   }
 }, 5000);
 
-    // Safari/WebKit fallback
-    W.setTimeout(function() {
-      try {
-        send(buildSignals(), false);
-      } catch (e) {}
-    }, 1500);
-
-  } catch (e) {
-    console.error('[PoH] audioHash failed', e);
-
-    try {
-      send(buildSignals(), false);
-    } catch (err) {}
-  }
-}, 5000);
-
-    // Safari/WebKit fallback
-    W.setTimeout(function() {
-      try {
-        send(buildSignals(), false);
-      } catch (e) {}
-    }, 1500);
-
-  } catch (e) {
-    console.error('[PoH] audioHash failed', e);
-
-    try {
-      send(buildSignals(), false);
-    } catch (err) {}
-  }
-}, 5000);
-
-  // Final send on page hide/unload
-  function onHide() {
-    if (!earlyFired) W.clearTimeout(earlyTimer);
-    audioHash(function(h) {
-      ENV.audioHash = h;
-      send(buildSignals(), true);
-    });
-  }
-
   document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'hidden') onHide();
   });
