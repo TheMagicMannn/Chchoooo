@@ -424,9 +424,76 @@
 
   // ── Scheduling ────────────────────────────────────────────────────────────────
 
-  // Early send at 5s (gives time for interactions + audio var earlyFired = false;
+  // Early send at 5s (gives time for interactions + audio var earlyFired = // ── Scheduling ────────────────────────────────────────────────────────────────
 
+// Early send at 5s
+var earlyFired = false;
 
+var earlyTimer = W.setTimeout(function() {
+  earlyFired = true;
+
+  function safeSend(keepalive) {
+    try {
+      send(buildSignals(), keepalive);
+    } catch (e) {
+      console.error('[PoH] send failed', e);
+    }
+  }
+
+  try {
+    audioHash(function(h) {
+      ENV.audioHash = h;
+      safeSend(false);
+    });
+
+    // Safari/WebKit fallback
+    W.setTimeout(function() {
+      safeSend(false);
+    }, 1500);
+
+  } catch (e) {
+    console.error('[PoH] audioHash failed', e);
+    safeSend(false);
+  }
+
+}, 5000);
+
+// Final send on page hide/unload
+function onHide() {
+  if (!earlyFired) {
+    W.clearTimeout(earlyTimer);
+  }
+
+  function safeSend(keepalive) {
+    try {
+      send(buildSignals(), keepalive);
+    } catch (e) {
+      console.error('[PoH] send failed', e);
+    }
+  }
+
+  try {
+    audioHash(function(h) {
+      ENV.audioHash = h;
+      safeSend(true);
+    });
+
+    W.setTimeout(function() {
+      safeSend(true);
+    }, 1000);
+
+  } catch (e) {
+    safeSend(true);
+  }
+}
+
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden') {
+    onHide();
+  }
+});
+
+W.addEventListener('pagehide', onHide, { once: true });
     
 
 }(window));
