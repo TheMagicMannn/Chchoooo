@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
-//import pinoHttp from "pino-http";
+import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -93,7 +93,7 @@ const allowedOrigins: string[] = (() => {
   return [];
 })();
 
-// /api/ingest is called cross-origin from customer websites — allow any origin.
+/api/ingest is called cross-origin from customer websites — allow any origin.
 // Bearer-token auth means cookies/credentials are not needed here.
 app.use("/api/ingest", cors({ origin: "*", credentials: false }));
 
