@@ -190,23 +190,12 @@ function Router() {
   );
 }
 
-// Clerk proxy: only valid for production Clerk instances (pk_live_...).
-// Dev instances (pk_test_...) reject proxy requests with "host_invalid" — Clerk's
-// proxy feature is not available for development keys regardless of configuration.
-// When switching to production keys, also register the proxy URL in the Clerk
-// dashboard → Domains → Proxy URL, then set VITE_CLERK_PROXY_URL in the
-// .replit build command to https://your-domain.replit.app/api/__clerk.
-const clerkProxyUrl = clerkPubKey.startsWith("pk_live_")
-  ? (import.meta.env.VITE_CLERK_PROXY_URL || undefined)
-  : undefined;
-
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
-      proxyUrl={clerkProxyUrl}
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}

@@ -72,7 +72,7 @@
     d.cookie = '_poh_sid=' + sessionId + '; path=/; max-age=1800; SameSite=Lax';
   } catch (e) {}
 
-  var apiEndpoint = cfg.ingestUrl || 'https://chchoooo--kwitter1982.replit.app/api/ingest';
+  var apiEndpoint = cfg.ingestUrl || (w.location.origin + '/api/ingest');
   console.log('[PoH] API endpoint:', apiEndpoint);
   
 
