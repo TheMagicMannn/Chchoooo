@@ -424,15 +424,55 @@
 
   // ── Scheduling ────────────────────────────────────────────────────────────────
 
-  // Early send at 5s (gives time for interactions + audio fingerprint)
-  var earlyFired = false;
-  var earlyTimer = W.setTimeout(function() {
-    earlyFired = true;
+  // Early send at 5s (gives time for interactions + audio var earlyFired = false;
+
+var earlyFired = false;
+
+var earlyTimer = W.setTimeout(function() {
+  earlyFired = true;
+
+  try {
     audioHash(function(h) {
       ENV.audioHash = h;
-      send(buildSignals(), false);
+
+      try {
+        send(buildSignals(), false);
+      } catch (e) {
+        console.error('[PoH] send failed', e);
+      }
     });
-  }, 5000);
+
+    // Safari/WebKit fallback
+    W.setTimeout(function() {
+      try {
+        send(buildSignals(), false);
+      } catch (e) {}
+    }, 1500);
+
+  } catch (e) {
+    console.error('[PoH] audioHash failed', e);
+
+    try {
+      send(buildSignals(), false);
+    } catch (err) {}
+  }
+}, 5000);
+
+    // Safari/WebKit fallback
+    W.setTimeout(function() {
+      try {
+        send(buildSignals(), false);
+      } catch (e) {}
+    }, 1500);
+
+  } catch (e) {
+    console.error('[PoH] audioHash failed', e);
+
+    try {
+      send(buildSignals(), false);
+    } catch (err) {}
+  }
+}, 5000);
 
   // Final send on page hide/unload
   function onHide() {
