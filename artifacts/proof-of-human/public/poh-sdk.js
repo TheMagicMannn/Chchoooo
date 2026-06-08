@@ -470,21 +470,6 @@
 
   // ── Scheduling ───────────────────────────────────────────────────────────────
 
-  var earlyFired = false;
-
-  var earlyTimer = W.setTimeout(function() {
-    earlyFired = true;
-
-    try {
-      audioHash(function(h) {
-        ENV.audioHash = h;
-
-        try {
-          send(buildSignals(), false);
-        } catch (err) {
-          console.error('[PoH] send failed', err);
-        }
-      });
 
       // Safari/WebKit fallback
       W.setTimeout(function() {
