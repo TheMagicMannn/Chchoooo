@@ -153,7 +153,7 @@ app.get("/api/stripe/prices", async (_req, res) => {
 
 app.use(clerkMiddleware());
 
-app.use("/api", router);
+//app.use("/api", router);
 
 // Serve the compiled React app and handle SPA deep-links when the dist is present.
 // Not gated on NODE_ENV — Replit deployments don't set it automatically.
