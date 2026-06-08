@@ -1,8 +1,8 @@
 import express, { type Express } from "express";
-import cors from "cors";
+//import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
-import pinoHttp from "pino-http";
+//import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import path from "path";
 import { fileURLToPath } from "url";
