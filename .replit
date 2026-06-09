@@ -31,7 +31,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=8080 NODE_ENV=development pnpm --filter @workspace/api-server run dev & VITE_CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY PORT=5000 BASE_PATH=/ pnpm --filter @workspace/proof-of-human run dev"
+args = "(PORT=8080 NODE_ENV=development node --enable-source-maps /home/runner/workspace/artifacts/api-server/dist/index.mjs &) && PORT=5000 VITE_CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY pnpm --filter @workspace/proof-of-human run dev"
 waitForPort = 5000
 
 [agent]
@@ -62,5 +62,21 @@ localPort = 8082
 externalPort = 3002
 
 [[ports]]
+localPort = 8888
+externalPort = 3001
+
+[[ports]]
+localPort = 8889
+externalPort = 3003
+
+[[ports]]
 localPort = 25723
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+NODE_ENV = "PRODUCTION "
+APP_BASE_URL = "https://chchoooo--kwitter1982.replit.app"
+VITE_CLERK_PROXY_URL = "https://chchoooo--kwitter1982.replit.app"
+NEON_DATABASE_URL = "postgresql://neondb_owner:npg_e3Zc0Uhosiyl@ep-wandering-cherry-aph9zdoo.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require"

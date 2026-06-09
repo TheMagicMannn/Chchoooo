@@ -1,14 +1,37 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
+import path from "path";
+import { fileURLToPath } from "url";
+import { existsSync } from "fs";
 import router from "./routes";
 import healthRouter from "./routes/health";
 import clerkWebhookRouter from "./routes/clerk_webhook";
 import { WebhookHandlers } from "./webhookHandlers";
 import { logger } from "./lib/logger";
+import {
+  CLERK_PROXY_PATH,
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware,
+  clerkProxyMiddleware,
+} from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
+app.set("trust proxy", 1);
+app.use(
+  CLERK_NPM_PROXY_PATH,
+  clerkNpmProxyMiddleware(),
+);
+app.use(
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware(),
+);
+
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(compression());
 
 app.use(
   pinoHttp({
@@ -60,29 +83,56 @@ app.post(
   clerkWebhookRouter,
 );
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : [];
+const allowedOrigins: string[] = (() => {
+  if (process.env.ALLOWED_ORIGINS) {
+    return process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim());
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    return process.env.REPLIT_DOMAINS.split(",").map((o) => o.trim());
+  }
+  return [];
+})();
 
-app.use(
-  cors({
-    credentials: true,
-    origin: (origin, callback) => {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-      if (
-        allowedOrigins.length === 0 ||
-        allowedOrigins.some((allowed) => origin === allowed || origin.endsWith(`.${allowed}`))
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS: origin not allowed"));
-      }
-    },
-  }),
-);
+// /api/ingest is called cross-origin from customer websites — allow any origin.
+// Bearer-token auth means cookies/credentials are not needed here.
+app.use("/api/ingest", cors({ origin: "*", credentials: false }));
+
+const dashboardCors = cors({
+  credentials: true,
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    if (allowedOrigins.length === 0) {
+      callback(null, true);
+      return;
+    }
+    // REPLIT_DOMAINS contains bare hostnames (e.g. "foo.replit.app") but
+    // the Origin header includes the protocol ("https://foo.replit.app"),
+    // so we extract the hostname before comparing.
+    let originHost: string;
+    try {
+      originHost = new URL(origin).hostname;
+    } catch {
+      originHost = origin;
+    }
+    if (
+      allowedOrigins.some(
+        (allowed) => originHost === allowed || originHost.endsWith(`.${allowed}`),
+      )
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS: origin not allowed"));
+    }
+  },
+});
+app.use((req, res, next) => {
+  // Ingest already has its own CORS headers set above — skip to avoid overwrite.
+  if (req.path.startsWith("/api/ingest")) return next();
+  return dashboardCors(req, res, next);
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -104,5 +154,24 @@ app.get("/api/stripe/prices", async (_req, res) => {
 app.use(clerkMiddleware());
 
 app.use("/api", router);
+
+// Serve the compiled React app and handle SPA deep-links when the dist is present.
+// Not gated on NODE_ENV — Replit deployments don't set it automatically.
+// In development the Vite dev server proxies /api to us so Express never
+// receives non-API requests, making these routes effectively unreachable.
+{
+  const distPath = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../proof-of-human/dist/public",
+  );
+  if (existsSync(distPath)) {
+    app.use(express.static(distPath));
+    // SPA fallback — any non-API path returns index.html so client-side routing works.
+    // app.use() (no path) avoids path-to-regexp, which rejects bare "*" in Express 5.
+    app.use((_req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+}
 
 export default app;
